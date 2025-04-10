@@ -15,7 +15,6 @@ class FuntionType(Type):
     def accept(self, v, param):
         return v.visitFuntionType(self, v, param)
 
-
 class Symbol:
     def __init__(self,name,mtype,value = None):
         self.name = name
@@ -30,13 +29,24 @@ class StaticChecker(BaseVisitor,Utils):
         self.ast = ast
         self.list_type: List[Union[StructType, InterfaceType]] = []
         self.list_function: List[FuncDecl] =  [
-                FuncDecl("getInt", [], IntType(), Block([])),
-                FuncDecl("putInt", [ParamDecl("VOTIEN", IntType())], VoidType(), Block([])),
-                FuncDecl("putIntLn", [ParamDecl("VOTIEN", IntType())], VoidType(), Block([])),
-                FuncDecl("getString", [], IntType(), Block([])),
-                FuncDecl("putString", [ParamDecl("VOTIEN", IntType())], VoidType(), Block([])),
-                FuncDecl("putStringLn", [ParamDecl("VOTIEN", StringType())], VoidType(), Block([]))
-            ]
+            FuncDecl("getInt", [], IntType(), Block([])),
+            FuncDecl("putInt", [ParamDecl("VOTIEN", IntType())], VoidType(), Block([])),
+            FuncDecl("putIntLn", [ParamDecl("VOTIEN", IntType())], VoidType(), Block([])),
+
+            FuncDecl("getFloat", [], FloatType(), Block([])),
+            FuncDecl("putFloat", [ParamDecl("VOTIEN", FloatType())], VoidType(), Block([])),
+            FuncDecl("putFloatLn", [ParamDecl("VOTIEN", FloatType())], VoidType(), Block([])),
+
+            FuncDecl("getBool", [], BoolType(), Block([])),
+            FuncDecl("putBool", [ParamDecl("VOTIEN", BoolType())], VoidType(), Block([])),
+            FuncDecl("putBoolLn", [ParamDecl("VOTIEN", BoolType())], VoidType(), Block([])),
+
+            FuncDecl("getString", [], StringType(), Block([])),
+            FuncDecl("putString", [ParamDecl("VOTIEN", StringType())], VoidType(), Block([])),
+            FuncDecl("putStringLn", [ParamDecl("VOTIEN", StringType())], VoidType(), Block([])),
+
+            FuncDecl("putLn", [], VoidType(), Block([]))
+        ]
         self.function_current: FuncDecl = None
 
     def check(self):
@@ -62,8 +72,8 @@ class StaticChecker(BaseVisitor,Utils):
 
     def visitProgram(self, ast: Program,c : None):
         def visitMethodDecl(ast: MethodDecl, c: StructType) -> MethodDecl:
+            pass
             # TODO: Implement
-
 
         list_str = ["getInt", "putInt", "putIntLn", "getFloat", "putFloat", "putFloatLn", "getBool", "putBool", "putBoolLn", "getString", "putString", "putStringLn", "putLn"]
 
@@ -74,19 +84,27 @@ class StaticChecker(BaseVisitor,Utils):
                 list_str.append(item.name)
             # TODO
 
+        # Lấy ra danh sách các Type sẽ gồm interface và struct
         self.list_type = reduce(lambda acc, ele: [self.visit(ele, acc)] + acc if isinstance(ele, Type) else acc, ast.decl, [])
+
+        # lấy ra danh sách các function (ở bước này chưa cần kiểm tra tên function có lặp lại không)
         self.list_function = self.list_function + list(filter(lambda item: isinstance(item, FuncDecl), ast.decl))
 
+        # cập nhật StructType
         list(map(
             lambda item: visitMethodDecl(item, self.lookup(item.recType.name, self.list_type, lambda x: x.name)),
              list(filter(lambda item: isinstance(item, MethodDecl), ast.decl))
         ))
 
+        # duyệt qua các khai báo gồm method/function/var và chỉ có function/method trả về Symbol để cập vào bảng Symbol
         reduce(
+            # NẾU LÀ Symbol mới được đưa vào bảng Symbol và cập nhật phần tử trả về tại trí đầu của bảng Symbol
             lambda acc, ele: [
                 ([result] + acc[0]) if isinstance(result := self.visit(ele, acc), Symbol) else acc[0]
             ] + acc[1:],
+            # LỌC RA method/function/var
             filter(lambda item: isinstance(item, Decl), ast.decl),
+            # TẦM VỰC ĐẦU TIÊN SẼ LÀ DANH SÁCH CÁC HÀM
             [[
                 Symbol("getInt", FuntionType()),
                 Symbol("putInt", FuntionType()),
@@ -106,7 +124,7 @@ class StaticChecker(BaseVisitor,Utils):
         )
 
     def visitStructType(self, ast: StructType, c : List[Union[StructType, InterfaceType]]) -> StructType:
-        # res = # TODO: Implement
+        res = # TODO: Implement
 
         def visitElements(element: Tuple[str,Type], c: List[Tuple[str,Type]]) -> Tuple[str,Type]:
             # TODO: Implement
@@ -115,22 +133,41 @@ class StaticChecker(BaseVisitor,Utils):
         return ast
 
     def visitPrototype(self, ast: Prototype, c: List[Prototype]) -> Prototype:
-        # TODO: Implement
+        # Kiểm tra xem đã có Prototype nào trùng tên hay chưa để nén ra lỗi Redeclared
+        res = self.lookup(ast.name, c, lambda x: x.name)
+        if not res is None:
+            raise Redeclared(Prototype(), ast.name)
+        return ast
+        # TODO: Implement - Done đi tìm Redeclared Prototype của Interface
 
     def visitInterfaceType(self, ast: InterfaceType, c : List[Union[StructType, InterfaceType]]) -> InterfaceType:
+        # Check tên của Interface xem trùng không
         res = self.lookup(ast.name, c, lambda x: x.name)
         if not res is None:
             raise Redeclared(StaticErrorType(), ast.name)
+        # Check tên của từng Prototype con xem có trùng không
         ast.methods = reduce(lambda acc,ele: [self.visit(ele,acc)] + acc , ast.methods , [])
         return ast
 
     def visitFuncDecl(self, ast: FuncDecl, c : List[List[Symbol]]) -> Symbol:
-        # TODO: Implement
+        # kiểm tra xem Symbol có chung tên đã tồn tại trong tầm vực hiện tại hay chưa
+        # TODO: Implement - Done 0 đi tìm
+        # c hay c[0] ?? Do nó nói là tầm vực hiện tại thay vì tầm vực global
+        res = self.lookup(ast.name, c[0], lambda x: x.name)
+        if not res is None:
+            raise Redeclared(Function(), ast.name)
+        # visit block và lấy ra danh sách param và chuyển thành Symbol trong tầm vực mới
         self.visit(ast.body, [list(reduce(lambda acc,ele: [self.visit(ele,acc)] + acc, ast.params, []))] + c)
-        return # TODO: Implement
+        # trả về Symbol tương ứng với Type là FuntionType
+        return Symbol(ast.name, ast.retType, None)
+        # TODO: Implement - Done Trả về Symbol của Symbol()
 
     def visitParamDecl(self, ast: ParamDecl, c: list[Symbol]) -> Symbol:
-        # TODO: Implement
+        # - kiểm tra xem đã có Symbol nào trùng tên hay chưa để nén ra lỗi Redeclared
+        # TODO: Implement - Done
+        res = self.lookup(ast.parName, c, lambda x: x.name)
+        if not res is None:
+            raise Redeclared(Parameter(), ast.parName)
         return Symbol(ast.parName, ast.parType, None)
 
     def visitMethodDecl(self, ast: MethodDecl, c : List[List[Symbol]]) -> None:
@@ -346,7 +383,8 @@ class StaticChecker(BaseVisitor,Utils):
     def visitStructLiteral(self, ast:StructLiteral, c: List[List[Symbol]]) -> Type:
         list(map(lambda value: self.visit(value[1], c), ast.elements))
         return # TODO: Implement
-    def visitNilLiteral(self, ast:NilLiteral, c: List[List[Symbol]]) -> Type: return StructType("", [], [])
+    def visitNilLiteral(self, ast:NilLiteral, c: List[List[Symbol]]) -> Type:
+        return StructType("", [], [])
 
 ''' file AST.py
 --- Has Attribute:
