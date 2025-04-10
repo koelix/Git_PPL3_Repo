@@ -64,7 +64,8 @@ class StaticChecker(BaseVisitor,Utils):
         def visitMethodDecl(ast: MethodDecl, c: StructType) -> MethodDecl:
             # TODO: Implement
 
-        list_str = ["getInt", "putInt", "putIntLn", # TODO .....]
+        list_str = ["getInt", "putInt", "putIntLn", "getFloat", "putFloat", "putFloatLn", "getBool", "putBool", "putBoolLn", "getString", "putString", "putStringLn", "putLn"]
+
         for item in ast.decl:
             if isinstance(item, Type):
                 if item.name in list_str:
