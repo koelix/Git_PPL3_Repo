@@ -1,0 +1,939 @@
+Template Prompt
+
+--- Task to do and Material
+- You are provide with the StaticCheck.py and CheckSuite.py (which stores testcases)
+- Some other related file is provided at the end of the StaticCheck.py (The AST.py)
+- You are requested to change only the StaticCheck.py (follow the framework already 
+- If there is comment in the code, you must leaves it if it does not conflict the logic. If it is, provide the new comment to replace.
+- When you do each Function, give me a short explain what it do and affect the scope/usage in other function.
+- If there is some function don't use for that testcase, you must write down (and change at least for it to run not bug) / or save the framework for later testcases (This is important)
+- You are request to keep all the comment in the code (if it is not conflict with the workflow you are doing, if so, point out the difference)
+- Especially, keep the AST.py comment at the last of code for later (Must not remove)
+
+-- Skip the Updates section for now
+-- Do till the test all
+
+
+--- CheckList từng hàm
+- Khởi tạo và điều khiển:
+- - [DONE] `__init__`
+- - [DONE] `check`
+
+- Chương trình và khai báo:
+- - [TODO] `visitProgram`
+- - [TODO] `visitStructType`
+- - [TODO] `visitPrototype`
+- - [DONE] `visitInterfaceType`
+- - [TODO] `visitFuncDecl`
+- - [TODO] `visitParamDecl`
+- - [TODO] `visitMethodDecl`
+- - [DONE] `visitVarDecl`
+- - [TODO] `visitConstDecl`
+- - [DONE] `visitBlock`
+
+- Vòng lặp:
+- - [TODO] `visitForBasic`
+- - [TODO] `visitForStep`
+- - [TODO] `visitForEach`
+
+- Biểu thức và truy cập:
+- - [TODO] `visitId`
+- - [TODO] `visitFuncCall`
+- - [TODO] `visitFieldAccess`
+- - [TODO] `visitMethCall`
+- - [TODO] `visitAssign`
+- - [TODO] `visitBinaryOp`
+- - [TODO] `visitUnaryOp`
+- - [TODO] `visitArrayCell`
+
+- Kiểu dữ liệu:
+- - [TODO] `checkType`
+- - [DONE] `visitIntType`
+- - [DONE] `visitFloatType`
+- - [DONE] `visitBoolType`
+- - [DONE] `visitStringType`
+- - [TODO] `visitArrayType`
+
+- Literal:
+- - [DONE] `visitIntLiteral`
+- - [DONE] `visitFloatLiteral`
+- - [DONE] `visitBooleanLiteral`
+- - [DONE] `visitStringLiteral`
+- - [TODO] `visitArrayLiteral`
+- - [TODO] `visitStructLiteral`
+- - [DONE] `visitNilLiteral`
+
+- Điều khiển luồng:
+- - [TODO] `visitIf`
+- - [DONE] `visitContinue`
+- - [DONE] `visitBreak`
+- - [TODO] `visitReturn`
+
+- Hỗ trợ tính toán:
+- - [TODO] `evaluate_ast`
+- - [DONE] `visitVoidType`
+
+--- Workflow of the code
+Must have the c (Stack) explain how it work
+Others thing like type and storage type/attribute, ....
+
+--- Grok Work Flow
+--- Workflow của chương trình StaticChecker
+
+## Tổng quan
+- Chương trình StaticChecker là một trình kiểm tra tĩnh (static checker) được thiết kế để phân tích mã nguồn thông qua cây cú pháp trừu tượng (AST - Abstract Syntax Tree).
+- Workflow chính bắt đầu từ hàm `check`, gọi `visit` trên AST của chương trình, sau đó phân tích từng phần tử trong AST bằng cách sử dụng các hàm `visit` tương ứng.
+- Quản lý scope (phạm vi) được thực hiện thông qua **stack c**, một danh sách các scope, với scope hiện tại luôn nằm ở đầu stack.
+- Mục tiêu: Kiểm tra tính hợp lệ của mã nguồn, bao gồm kiểu dữ liệu, khai báo, truy cập, và điều khiển luồng.
+
+## Cấu trúc của Workflow
+- Workflow được chia thành các giai đoạn chính:
+  - **Khởi tạo**: Thiết lập các thuộc tính ban đầu.
+  - **Xử lý chương trình**: Phân tích các khai báo cấp cao nhất.
+  - **Xử lý chi tiết**: Xử lý từng loại khai báo, biểu thức, câu lệnh, v.v.
+  - **Quản lý scope**: Sử dụng stack `c` để theo dõi các biến và phạm vi.
+
+### 1. Khởi tạo
+- Hàm thực thi: `__init__` và `check`
+- Mô tả:
+  - `__init__`: Khởi tạo các thuộc tính quan trọng:
+    - `self.list_type`: Lưu danh sách các kiểu Struct và Interface.
+    - `self.list_function`: Lưu danh sách các hàm toàn cục (bao gồm các hàm mặc định như `getInt`, `putIntLn`).
+    - `self.function_current`: Theo dõi hàm hiện tại (ban đầu là None).
+    - Stack `c` chưa được khởi tạo ở đây, mà sẽ được tạo khi bắt đầu phân tích.
+  - `check`: Điểm bắt đầu chính, gọi `visit` trên AST với tham số ban đầu là None.
+- Vai trò trong stack `c`:
+  - Chưa có thay đổi nào với stack `c` ở giai đoạn này.
+
+### 2. Xử lý chương trình (visitProgram)
+- Hàm thực thi: `visitProgram`
+- Mô tả:
+  - Xử lý toàn bộ các khai báo cấp cao nhất trong chương trình (struct, interface, hàm, biến, hằng).
+  - Thu thập thông tin vào `self.list_type` và `self.list_function`.
+  - Liên kết các phương thức với struct tương ứng.
+  - Kiểm tra xung đột tên giữa các khai báo.
+  - Khởi tạo stack `c` ban đầu với scope toàn cục.
+- Vai trò trong stack `c`:
+  - Tạo scope toàn cục (`symbol_table`) chứa các hàm mặc định và các khai báo toàn cục.
+  - Thêm các symbol (biến, hằng, hàm) vào scope toàn cục.
+  - Ví dụ: `[Symbol("getInt", FunctionType()), Symbol("b", IntType(), 2)]`.
+
+### 3. Xử lý các khai báo chi tiết
+#### 3.1. Struct (visitStructType)
+- Mô tả:
+  - Kiểm tra tên struct không trùng lặp trong `self.list_type`.
+  - Xử lý các trường (fields) của struct, đảm bảo không có trường nào trùng tên.
+  - Thêm struct vào `self.list_type`.
+- Vai trò trong stack `c`:
+  - Không thay đổi trực tiếp stack `c`, chỉ cập nhật `self.list_type`.
+
+#### 3.2. Interface (visitInterfaceType)
+- Mô tả:
+  - Kiểm tra tên interface không trùng lặp trong `self.list_type`.
+  - Xử lý các prototype (nguyên mẫu phương thức), đảm bảo không trùng tên.
+  - Thêm interface vào `self.list_type`.
+- Vai trò trong stack `c`:
+  - Không thay đổi trực tiếp stack `c`.
+
+#### 3.3. Hàm (visitFuncDecl)
+- Mô tả:
+  - Kiểm tra tên hàm không trùng lặp trong scope toàn cục.
+  - Thiết lập `self.function_current` là hàm hiện tại.
+  - Xử lý các tham số và thân hàm (block).
+  - Thêm hàm vào `self.list_function`.
+- Vai trò trong stack `c`:
+  - Tạo scope mới cho tham số hàm: `[params] + c`.
+  - Gọi `visitBlock` để xử lý thân hàm với scope mới.
+  - Sau khi xử lý xong, scope tham số bị xóa.
+
+#### 3.4. Phương thức (visitMethodDecl)
+- Mô tả:
+  - Tìm struct tương ứng và liên kết phương thức.
+  - Thiết lập `self.function_current` là hàm của phương thức.
+  - Xử lý tham số (bao gồm receiver) và thân phương thức.
+- Vai trò trong stack `c`:
+  - Tạo scope mới chứa receiver và tham số: `[params] + c`.
+  - Gọi `visitBlock` để xử lý thân phương thức.
+  - Scope bị xóa sau khi xử lý xong.
+
+#### 3.5. Biến (visitVarDecl)
+- Mô tả:
+  - Kiểm tra tên biến không trùng trong scope hiện tại.
+  - Xác định kiểu của biến (từ khai báo hoặc giá trị khởi tạo).
+  - Thêm symbol biến vào scope hiện tại.
+- Vai trò trong stack `c`:
+  - Thêm `Symbol(name, type)` vào `c[0]` (scope hiện tại).
+
+#### 3.6. Hằng số (visitConstDecl)
+- Mô tả:
+  - Kiểm tra tên hằng không trùng trong scope hiện tại.
+  - Đảm bảo có giá trị khởi tạo và kiểm tra kiểu hợp lệ.
+  - Thêm symbol hằng vào scope hiện tại.
+- Vai trò trong stack `c`:
+  - Thêm `Symbol(name, type, value)` vào `c[0]`.
+
+### 4. Xử lý khối lệnh (visitBlock)
+- Mô tả:
+  - Tạo scope mới cho khối lệnh.
+  - Xử lý từng thành viên trong khối (khai báo, câu lệnh).
+- Vai trò trong stack `c`:
+  - Thêm scope mới vào đầu stack: `[[]] + c`.
+  - Thêm các symbol từ khai báo vào `c[0]`.
+  - Sau khi xử lý xong, scope mới bị xóa khỏi stack.
+
+### 5. Xử lý vòng lặp
+#### 5.1. For cơ bản (visitForBasic)
+- Mô tả:
+  - Kiểm tra điều kiện là kiểu Bool.
+  - Xử lý thân vòng lặp.
+- Vai trò trong stack `c`:
+  - Không tạo scope mới, sử dụng scope hiện tại.
+
+#### 5.2. For với bước lặp (visitForStep)
+- Mô tả:
+  - Xử lý phần khởi tạo, điều kiện, cập nhật, và thân vòng lặp.
+- Vai trò trong stack `c`:
+  - Tạo scope mới cho biến khởi tạo: `[[init_symbol]] + c`.
+  - Scope bị xóa sau khi vòng lặp kết thúc.
+
+#### 5.3. For each (visitForEach)
+- Mô tả:
+  - Kiểm tra `arr` là mảng.
+  - Tạo biến `idx` và `value` với kiểu phù hợp.
+  - Xử lý thân vòng lặp.
+- Vai trò trong stack `c`:
+  - Tạo scope mới chứa `idx` và `value`: `[symbols] + c`.
+  - Scope bị xóa sau khi vòng lặp kết thúc.
+
+### 6. Xử lý biểu thức và truy cập
+#### 6.1. Identifier (visitId)
+- Mô tả:
+  - Tìm symbol trong stack `c` từ scope hiện tại ra ngoài.
+  - Trả về kiểu của symbol.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack, chỉ tra cứu.
+
+#### 6.2. Gọi hàm (visitFuncCall)
+- Mô tả:
+  - Tìm hàm trong `self.list_function`.
+  - Kiểm tra số lượng và kiểu đối số.
+  - Trả về kiểu trả về của hàm.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack, chỉ tra cứu đối số.
+
+#### 6.3. Truy cập trường (visitFieldAccess)
+- Mô tả:
+  - Xác định kiểu của receiver (phải là Struct).
+  - Tìm trường trong struct và trả về kiểu của trường.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+#### 6.4. Gọi phương thức (visitMethCall)
+- Mô tả:
+  - Xác định kiểu của receiver (Struct hoặc Interface).
+  - Tìm phương thức và kiểm tra đối số.
+  - Trả về kiểu trả về.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+#### 6.5. Phép gán (visitAssign)
+- Mô tả:
+  - Kiểm tra kiểu của LHS và RHS tương thích.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack, chỉ tra cứu kiểu.
+
+#### 6.6. Toán tử nhị phân (visitBinaryOp)
+- Mô tả:
+  - Kiểm tra kiểu của hai toán hạng.
+  - Trả về kiểu kết quả dựa trên toán tử.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+#### 6.7. Toán tử đơn (visitUnaryOp)
+- Mô tả:
+  - Kiểm tra kiểu của toán hạng.
+  - Trả về kiểu kết quả.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+#### 6.8. Truy cập phần tử mảng (visitArrayCell)
+- Mô tả:
+  - Kiểm tra `arr` là mảng, các chỉ số là kiểu Int.
+  - Trả về kiểu phần tử hoặc mảng con.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+### 7. Xử lý kiểu dữ liệu
+#### 7.1. Kiểm tra kiểu (checkType)
+- Mô tả:
+  - So sánh hai kiểu có tương thích không (xử lý nil, ép kiểu ngầm định).
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+#### 7.2. Các kiểu nguyên thủy (visitIntType, visitFloatType, visitBoolType, visitStringType, visitVoidType)
+- Mô tả:
+  - Trả về chính kiểu đó.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+#### 7.3. Kiểu mảng (visitArrayType)
+- Mô tả:
+  - Kiểm tra các chiều của mảng hợp lệ.
+  - Trả về kiểu mảng.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+### 8. Xử lý literal
+#### 8.1. Literal cơ bản (visitIntLiteral, visitFloatLiteral, visitBooleanLiteral, visitStringLiteral)
+- Mô tả:
+  - Trả về kiểu tương ứng (IntType, FloatType, BoolType, StringType).
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+#### 8.2. Mảng literal (visitArrayLiteral)
+- Mô tả:
+  - Kiểm tra kiểu của các phần tử.
+  - Trả về kiểu mảng.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+#### 8.3. Struct literal (visitStructLiteral)
+- Mô tả:
+  - Tìm struct tương ứng.
+  - Kiểm tra các trường và kiểu của chúng.
+  - Trả về kiểu struct.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+#### 8.4. Nil literal (visitNilLiteral)
+- Mô tả:
+  - Trả về kiểu đặc biệt cho nil (StructType rỗng).
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+### 9. Xử lý điều khiển luồng
+#### 9.1. If (visitIf)
+- Mô tả:
+  - Kiểm tra điều kiện là Bool.
+  - Xử lý then và else (nếu có).
+- Vai trò trong stack `c`:
+  - Không tạo scope mới, sử dụng scope hiện tại.
+
+#### 9.2. Continue và Break (visitContinue, visitBreak)
+- Mô tả:
+  - Hiện không làm gì đặc biệt.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+#### 9.3. Return (visitReturn)
+- Mô tả:
+  - Kiểm tra kiểu của biểu thức return khớp với kiểu trả về của hàm.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+### 10. Quản lý stack `c`
+- Mô tả:
+  - Stack `c` là danh sách các scope, với `c[0]` là scope hiện tại.
+  - Khi vào block mới (hàm, vòng lặp, khối lệnh), một scope mới được thêm vào đầu stack: `[[]] + c`.
+  - Khi ra khỏi block, scope đầu tiên bị xóa, quay lại scope trước đó.
+  - Ví dụ:
+    - Ban đầu: `[[Symbol("b", IntType(), 2)]]` (scope toàn cục).
+    - Vào hàm: `[[Symbol("param", IntType())], [Symbol("b", IntType(), 2)]]`.
+    - Vào block trong hàm: `[[Symbol("local", IntType())], [Symbol("param", IntType())], [Symbol("b", IntType(), 2)]]`.
+    - Ra khỏi block: `[[Symbol("param", IntType())], [Symbol("b", IntType(), 2)]]`.
+
+### 11. Ví dụ luồng xử lý
+- Code mẫu:
+  const b = 2;
+  func Votien(b int) {
+      var a = 1;
+  }
+- Luồng:
+  - `visitProgram`: Tạo scope toàn cục `[Symbol("b", IntType(), 2), Symbol("Votien", MType([IntType()], VoidType()))]`.
+  - `visitFuncDecl`: Tạo scope mới `[Symbol("b", IntType())] + c`, xử lý thân hàm.
+  - `visitBlock`: Tạo scope mới `[Symbol("a", IntType())] + c`, sau đó xóa scope này.
+  - Kết thúc hàm: Xóa scope tham số, quay lại scope toàn cục.
+
+--- Kết thúc Workflow của chương trình StaticChecker
+
+----- Note
+The number in this note is relative, just to know which giải thích cho từng câu lệnh trong 1 hàm, 
+In file StaticCheck.py may have different line of code, but the meaning and usage for each follow these rule in this note
+Có mấy cái bản cũ, tham khảo thôi, còn cái nào không có bản cũ thì có thể áp dung trực tiếp trên StaticCheck.py
+
+----- Updates
+########## Cập nhật	 28/3
+- [2] float = [2] int là đúng
+- [2] int = [3] int là sai
+- khai báo type không được chung với tên hàm và tên biến, hàm
+```py
+var A = 1;
+type A struct {} # lỗi
+```
+- Const sẽ được tính giá trị để tính kích thước array
+```py
+const a = 1 + 2;
+var b [a] int;
+var c [4] int = b; # sai vì 4 != 3
+```
+# hướng dẫn 
+- khai báo type không được chung với tên hàm và tên biến, hàm:
+```py
+def visitProgram(self, ast: Program,c : None):
+    def visitMethodDecl(ast: MethodDecl, c: StructType) -> MethodDecl:
+        // TODO
+
+    list_str = ["getInt", "putInt", "putIntLn", ...........]
+    for item in ast.decl:
+        if isinstance(item, Type):
+            if item.name in list_str:
+                raise Redeclared(StaticErrorType(), item.name)
+            list_str.append(item.name)
+        // TODO
+```
+- Phần array cần chỉnh
+```py
+if isinstance(LSH_type, ArrayType) and isinstance(RHS_type, ArrayType):
+    return # TOOO với các phần tử trong dimens đều là IntLiteral (này sẽ được chuyển đổi ở bước sau)
+```
+
+### Const
+- lúc khai báo type thì vần visit type trong param, function, var. ,,,,
+```py
+var a [ID] int; # visit phàn ArrayType
+```
+- Triển khai nào thính
+```py
+def evaluate_ast(self, node: AST, c : List[List[Symbol]]) -> int:
+    if type(node) == IntLiteral:
+        return int(node.value)
+    elif type(node) == Id:
+        res = # TÌM GIÁ TRỊ
+        return 
+## TODO binary và Unary, các trường hợp còn lại sẽ không hợp lệ vì sẽ không là kiểu int và thầy đã thông báo trên forum
+    return 0
+```
+- VÍ DỤ 1
+```go
+const a = 2; 
+const b = 1 + a;
+int c [b] int = [3] int {1,2,3}
+```
++ const chỉ bao gồm các lit và ID (ID này cũng là biến const)
++ tại a ta lưu a.value = IntLiteral(2)
++ tại b ta gọi hàm evaluate_ast trả về b.value = IntLiteral(3)
++ tại c ta có khai báo [b] int ta visit ta lấy b.value = IntLiteral(3), vê phải cũng tương tự là IntLiteral(3) 
++ so sánh LSH và RHS là ArrayType([IntLiteral(3)], IntType) và ArrayType([IntLiteral(3)], IntType)
+
+- Ví Dụ 2
+```go
+const a = "string"
+const b = "string" + a;
+```
++ vì a và b là kiểu string chắc chắn không thể nào khai báo trong type int được nên trả về value là 0 đại đi không cần quan tâm
+
+- Ví Dụ 3
+```go
+const b = foo()
+```
++ này không xảy ra thầy giới hạn rồi const bỉ sao gồm literal và ID (const)
+
+# update ngày 29/5 (BOT 3 update lên 206 test case)
+```python
+def visitAssign(self, ast: Assign, c: List[List[Symbol]]) -> None:
+    if type(ast.lhs) is Id:
+        # TÌM KIẾM XEM BIẾN ĐÃ ĐƯỢC KHAI BÁO CHƯA ĐƯỢC KHAI BÁO THÌ TRẢ VỀ Symbol(ast.lhs.name, self.visit(ast.rhs, c), None)
+  
+    LHS_type = self.visit(ast.lhs, c)
+    RHS_type = self.visit(ast.rhs, c)
+    if not self.checkType(LHS_type, RHS_type, [(FloatType, IntType), (InterfaceType, StructType)]):
+        raise TypeMismatch(ast)
+```
+
+########## CẬP NHẬT 3/4
+- PHÉP GÁN CHO ``` a := 1;``` sẽ tương đương ```var a := 1``` nếu chưa được khai báo (hướng giải quyết chỉ cần phép gán trả về Symbol nếu rới vào TH đó)
+```py
+    def test_202(self):
+        """
+func foo() {
+    a := 1;
+    var a = 1;
+}
+        """
+        input = Program([FuncDecl("foo",[],VoidType(),Block([Assign(Id("a"),IntLiteral(1)),VarDecl("a", None,IntLiteral(1))]))])
+        self.assertTrue(TestChecker.test(input, """Redeclared Variable: a""", inspect.stack()[0].function)) 
+```
+- hậu điều kiện trong for sẽ được xử lí trước block
+```py
+    def test_208(self):
+        """
+func Votien (b int) {
+    for var a = 1; c < 1; a += c {
+        const c = 2;
+    }
+}
+        """
+        input = Program([FuncDecl("Votien",[ParamDecl("b",IntType())],VoidType(),Block([ForStep(VarDecl("a", None,IntLiteral(1)),BinaryOp("<", Id("c"), IntLiteral(1)),Assign(Id("a"),BinaryOp("+", Id("a"), Id("c"))),Block([ConstDecl("c",None,IntLiteral(2))]))]))])
+        self.assertTrue(TestChecker.test(input, """Undeclared Identifier: c""", inspect.stack()[0].function)) 
+```
+- receiver sẽ có tầm vực khác so với toàn cục và cục bộ  (cập nhật lại lúc visit param trong method thôi)
+```py
+    def test_210(self):
+        """
+var v TIEN;
+func (v TIEN) foo (v int) int {
+    return v;
+}
+
+type TIEN struct {
+    Votien int;
+}
+        """
+        input = Program([VarDecl("v",Id("TIEN"), None),MethodDecl("v",Id("TIEN"),FuncDecl("foo",[ParamDecl("v",IntType())],IntType(),Block([Return(Id("v"))]))),StructType("TIEN",[("Votien",IntType())],[])])
+        self.assertTrue(TestChecker.test(input, "", inspect.stack()[0].function))
+
+```
+
+########## CẬP NHẬT 6/4
+## trong một  struct thì METHOD và FIELD không được trùng nhau (nào được khai báo sau sẽ ném ra lối)
+```py
+    def test_216(self):
+        """
+func (v TIEN) VO () {return ;}
+func (v TIEN) Tien () {return ;}
+type TIEN struct {
+    Votien int;
+    Tien int;
+}
+        """
+        input = Program([MethodDecl("v",Id("TIEN"),FuncDecl("VO",[],VoidType(),Block([Return(None)]))),MethodDecl("v",Id("TIEN"),FuncDecl("Tien",[],VoidType(),Block([Return(None)]))),StructType("TIEN",[("Votien",IntType()),("Tien",IntType())],[])])
+        self.assertTrue(TestChecker.test(input, """Redeclared Field: Tien""", inspect.stack()[0].function))
+```
+**Gợi Ý**
+- sẽ triển khai ở bước trước khi duyệt cục bộ (sau bước visitMethodDecl trong visitProgram)
+- dùng Python Dictionaries để triển khai
+```py
+dictionaries_struct[name struct] = [list name method and field]
+```
+
+########## CẬP NHẬT 7/4 
+## FIELD sẽ được đưa vào Struct trước METHOD
+- `visitProgram.visitMethodDecl` chỉ cần thêm một lệnh kiểm tra `ast.fun.name` có trong `c.elements`
+## Function sẽ bị che lại nếu trong trong có khai báo bại tên function đó
+- thêm kiểm tra tên function có trong `Symbol` hay không giống `visitID`
+
+# CẬP NHẬT 7/4 
+## FIELD sẽ được đưa vào Struct trước METHOD
+```py
+    def test_216(self):
+        """
+func (v TIEN) VO () {return ;}
+func (v TIEN) Tien () {return ;}
+type TIEN struct {
+    Votien int;
+    Tien int;
+}
+        """
+        input = Program([MethodDecl("v",Id("TIEN"),FuncDecl("VO",[],VoidType(),Block([Return(None)]))),MethodDecl("v",Id("TIEN"),FuncDecl("Tien",[],VoidType(),Block([Return(None)]))),StructType("TIEN",[("Votien",IntType()),("Tien",IntType())],[])])
+        self.assertTrue(TestChecker.test(input, """Redeclared Method: Tien""", inspect.stack()[0].function))
+```
+- `visitProgram.visitMethodDecl` chỉ cần thêm một lệnh kiểm tra `ast.fun.name` có trong `c.elements`
+## Function sẽ bị che lại nếu trong trong có khai báo bại tên function đó
+```py
+    def test_228(self):
+        input = """
+func foo() int {
+    const foo = 1;
+    return foo()
+}
+        """
+        input = Program([FuncDecl("foo",[],IntType(),Block([ConstDecl("foo",None,IntLiteral(1)),Return(FuncCall("foo",[]))]))])
+        self.assertTrue(TestChecker.test(input, """Undeclared Function: foo""", inspect.stack()[0].function))
+```
+- thêm kiểm tra tên function có trong `Symbol` hay không giống `visitID`
+
+########## CẬP NHẬT 10/4
+# CẬP NHẬT FOR ARRAY ( index và value phải được khai báo trước)
+```PY
+def visitForEach(self, ast: ForEach, c: List[List[Symbol]]) -> None: 
+    type_array = self.visit(ast.arr, c)
+    if type(self.visit(ast.arr, c)) != ArrayType:
+        raise TypeMismatch(ast)
+    
+    type_idx = self.visit(ast.idx, c)
+    ## TODO 
+    
+    type_value = self.visit(ast.value, c)
+    if not self.checkType(type_value, ## TODO )):
+        raise TypeMismatch(ast)          
+
+    self.visit(Block(ast.loop.member), c)
+```
+
+---------- Các phần code
+----- visitProgram
+- *visitMethodDecl* dùng để đệ quy cho MethodDecl nhằm mục đích cập nhật giá trị methods cho StructType
+- *Hàng 48* lấy ra danh sách các Type sẽ gồm interface và struct
+- *Hàng 49* lấy ra danh sách các function (ở bước này chưa cần kiểm tra tên function có lặp lại không)
+- *Hàng 51* cập nhật StructType 
+- *Hàng 56* duyệt qua các khai báo gồm method/function/var và chỉ có function/method trả về Symbol để cập vào bảng Symbol
+```py
+reduce(
+ # NẾU LÀ Symbol mới được đưa vào bảng Symbol và cập nhật phần tử trả về tại trí đầu của bảng Symbol
+  lambda acc, ele: [
+      ([result] + acc[0]) if isinstance(result := self.visit(ele, acc), Symbol) else acc[0]
+  ] + acc[1:], 
+  # LỌC RA method/function/var
+  filter(lambda item: isinstance(item, Decl), ast.decl), 
+ # TẦM VỰC ĐẦU TIÊN SẼ LÀ DANH SÁCH CÁC HÀM
+  [[
+      Symbol("getInt", FuntionType()),
+      Symbol("putInt", FuntionType()),
+      Symbol("putIntLn", FuntionType()),
+      # TODO: Implement
+  ]]
+) 
+```
+    def visitProgram(self, ast: Program,c : None):
+        def visitMethodDecl(ast: MethodDecl, c: StructType) -> MethodDecl:
+            # TODO: Implement
+
+        list_str = ["getInt", "putInt", "putIntLn", # TODO .....]
+        for item in ast.decl:
+            if isinstance(item, Type):
+                if item.name in list_str:
+                    raise Redeclared(StaticErrorType(), item.name)
+                list_str.append(item.name)
+            # TODO
+
+        self.list_type = reduce(lambda acc, ele: [self.visit(ele, acc)] + acc if isinstance(ele, Type) else acc, ast.decl, []) # (Hàng 48)
+        self.list_function = self.list_function + list(filter(lambda item: isinstance(item, FuncDecl), ast.decl)) # (Hàng 49)
+        
+        list(map(
+            lambda item: visitMethodDecl(item, self.lookup(item.recType.name, self.list_type, lambda x: x.name)), 
+             list(filter(lambda item: isinstance(item, MethodDecl), ast.decl))
+        )) # (Hàng 51)
+
+        reduce(
+            lambda acc, ele: [
+                ([result] + acc[0]) if isinstance(result := self.visit(ele, acc), Symbol) else acc[0]
+            ] + acc[1:], 
+            filter(lambda item: isinstance(item, Decl), ast.decl), 
+            [[
+                Symbol("getInt", FuntionType()),
+                Symbol("putInt", FuntionType()),
+                Symbol("putIntLn", FuntionType()),
+                # TODO: Implement
+            ]]
+        ) # (Hàng 56)
+
+
+----- 
+- *Hàng 71* kiểm tra xem đã có Type nào trùng tên hay chưa để nén ra lỗi Redeclared
+- *visitElements*  dùng để đệ quy cho elements để tìm lỗi Redeclared
+- *Hàng  76* kiểm tra trong elements
+(70) def visitStructType(self, ast: StructType, c: List[Union[StructType, InterfaceType]]) -> StructType:
+(71)     res = # TODO: Implement
+(72) 
+(73) def visitElements(element: Tuple[str, Type], c: List[Tuple[str, Type]]) -> Tuple[str, Type]:
+(74)     # TODO: Implement
+(75)	
+(76) ast.elements = reduce(lambda acc, ele: [visitElements(ele, acc)] + acc, ast.elements, [])
+(77) return ast
+
+----- visitPrototype
+- kiểm tra xem đã có Prototype nào trùng tên hay chưa để nén ra lỗi Redeclared
+(79) def visitPrototype(self, ast: Prototype, c: List[Prototype]) -> Prototype:
+(80)     # TODO: Implement
+(81)     
+
+----- visitInterfaceType
+- *Hàng 83* kiểm tra xem đã có Type nào trùng tên hay chưa để nén ra lỗi Redeclared
+- *Hàng 86*  dùng để đệ quy cho methods để tìm lỗi Redeclared
+(82) def visitInterfaceType(self, ast: InterfaceType, c: List[Union[StructType, InterfaceType]]) -> InterfaceType:
+(83)     res = self.lookup(ast.name, c, lambda x: x.name)
+(84)     if not res is None:
+(85)         raise Redeclared(StaticErrorType(), ast.name)
+(86)     ast.methods = reduce(lambda acc, ele: [self.visit(ele, acc)] + acc, ast.methods, [])
+(87)     return ast
+
+----- visitFuncDecl
+- *hàng 90* kiểm tra xem Symbol có chung tên đã tồn tại trong tầm vực hiện tại hay chưa
+- *hàng 91* visit block và lấy ra danh sách param và chuyển thành Symbol trong tầm vực mới
+- *hàng 92* trả về Symbol tương ứng với Type là FuntionType
+(89) def visitFuncDecl(self, ast: FuncDecl, c: List[List[Symbol]]) -> Symbol:
+(90)     # TODO: Implement
+(91)     self.visit(ast.body, [list(reduce(lambda acc, ele: [self.visit(ele, acc)] + acc, ast.params, [])) + c])
+(92)     return # TODO: Implement
+
+----- visitParamDecl
+- kiểm tra xem đã có Symbol nào trùng tên hay chưa để nén ra lỗi Redeclared
+(94) def visitParamDecl(self, ast: ParamDecl, c: list[Symbol]) -> Symbol:
+(95)     # TODO: Implement
+(96)     return Symbol(ast.parName, ast.parType, None)
+
+----- visitMethodDecl
+- visit block và lấy ra danh sách param và chuyển thành Symbol trong tầm vực mới (receiver cũng là một phần của param)
+(98) def visitMethodDecl(self, ast: MethodDecl, c: List[List[Symbol]]) -> None:
+(99)     # TODO: Implement
+
+----- visitConstDecl
+visitConstDecl tương tự
+(107) def visitConstDecl(self, ast: ConstDecl, c: List[List[Symbol]]) -> Symbol:
+(108)     # TODO: Implement
+
+----- visitVarDecl
+hàng 125 tìm kiếm tên trong Symbol ở tầm vực đầu tiên
+hàng 126-127 ném ra lỗi Redeclared
+hàng 129 lấy ra type của biến đó nếu có
+hàng 130 nếu có giá trị thì gọi visit để lấy được type
+hàng 132 chỉ có type không có giá trị
+hàng 134 chỉ có giá trị không có type
+hàng 136 kiểm tra 2 kiểu có tương thích nhau hay không (có TH đặt biệt float = int và inteface = struct))
+
+(124) def visitVarDecl(self, ast: VarDecl, c : List[List[Symbol]]) -> Symbol:
+(125)	res = self. lookup(ast.varName, c[0], lambda x: x.name)
+(126)	if not res is None:
+(127)		raise Redeclared (Variable(), ast.varName)
+
+(129)	LHS_type = ast.varType if ast.varType else None
+(130)	RHS_type = self.visit(ast.varInit, c) if ast.varInit else None
+
+(132)	if RHS type is None:
+		return Symbol(ast.varName, LHS_type, None)
+(134)	elif LHS type is None:
+		return Symbol(ast.varName, RHS_type, None)
+(136)	elif self.checkType(LHS_type, RHS_type, [ (FloatType, IntType), (InterfaceType, StructType) ]) :
+		return Symbol(ast.varName, LHS_type, None)
+	raise TypeMismatch(ast)
+
+
+
+----- 
+- tìm kiếm method trong structType và interfaceType
+(146) def visitMethCall(self, ast: MethCall, c: List[List[Symbol]]) -> Type:
+(147)     type_receiver = self.visit(ast.receiver, c)
+(148)     res = # TODO: Implement if isinstance(type_receiver, StructType) else # TODO: Implement
+(149)     if res is None:
+(150)         raise Undeclared(Method(), ast.metName)
+
+-----
+- *Hàng 129* Tìm kiếm phần tử trùng tên trong bảng Symbol
+- *Hàng 131* trả mtype nếu không phải kiểu Id còn kiểu id thì trả về inteface/struct
+(128) def visitId(self, ast: Id, c: List[List[Symbol]]) -> Type:
+(129)     res = next(filter(None, # TODO: Implement), None)
+(130)     if res and not isinstance(res.mtype, Function):
+(131)         return res.mtype if not isinstance(res.mtype, Id) else # TODO: Implement
+(132)     raise Undeclared(Identifier(), ast.name)
+
+----- checkType
+hàng 48 + 49 kiểm tra phía trái là struct và phía bên phải là nil (nil được trả về struct type với name là rỗng)
+hàng 51 + 52 chuyển kiểu id về struct/interface
+hàng 53 kiểm tra các cặp cho phép có thể float = int, inteface = struct
+hàng 54 + 55 nếu mà inteface = struct cần phải kiểm tra các hàm trong inface có trong struct hay không (bao gồm return, params, name)
+hàng 58 + 59 so sánh struct/interface
+hàng 61 + 62 so sánh array
+hàng 63 so sánh kiểu bình thường
+
+def checkType(self, LSH_type: Type, RHS_type: Type, list_type_permission: List[Tuple[Type, Type]] = []) -> bool:
+(48) if type (RHS_type) == StructType and RHS_type. name == "":
+(49) return # TODO: Implement
+
+(51) LSH_type = self.lookup(LSH_type.name, self.list_type, lambda x: x.name) if isinstance(LSH_type, Id) else LSH_type
+(52) RHS type = self. lookup(RHS_type.name, self.list_type, lambda x: x.name) if isinstance(RHS_type, Id) else RHS_type
+(53) if (type(LSH_type), type(RHS_type) ) in list_type_permission:
+(54) if isinstance(LSH_type, InterfaceType) and isinstance(RHS_type, StructType):
+(55) return # TODO: Implement
+return True
+
+(58) if # TODO: Implement:
+(59) return LSH type.name == RHS_type.name
+
+(61) if isinstance(LSH_type, ArrayType) and isinstance(RHS_type, ArrayType) :
+(62) return # TODO: Implement
+(63) return type(LSH_type) == type(RHS_type)
+
+
+
+----- visitBlock
+hàng 145 tăng tầm vực, tạo Tầm vực mới giống như trong visitProgram
+hàng 148 vì funcall có 2 TH là expr và stmt nên cần phân biệt bằng cách tuyền thêm biến cờ và truyền theo kiểu tuple (acc, True), các TH conf lại thì bình thường
+hàng 149 chỉ có var và con mới được cập nhật acc
+
+	def visitBlock(self, ast: Block, c: List[List[Symbol]]) .> None:
+(145)		acc = [[]] + c
+
+(147)		for ele in ast.member:
+(148)			result = self.visit(ele, (acc, True)) if isinstance(ele, (FuncCall, MethCall)) else self.visit(ele, acc)
+(149)			if isinstance(result, Symbol) :
+(150)				acc[0] = [result] + acc[0]
+
+
+----- For
+- Gọi đến block để cấp phát tầm vực mới
+- hàng 153 và 159 cần đảm bảo điều kiện đang kiểu Bool (ở 159 điều kiện trong tầm block và dưới init)
+- hàng 161 đưa các khai báo vào chung tầm vực block
+- hàng 165 arr phải có kiểu array
+# CẬP NHẬT FOR ARRAY ( index và value phải được khai báo trước)
+
+(152)      def visitForBasic(self, ast: ForBasic, c : List[List[Symbol]]) -> None:
+(153)           if # TODO: Implement:
+(154)               raise TypeMismatch(ast)
+(155)           self.visit(ast.loop, c)
+
+(156)      def visitForStep(self, ast: ForStep, c: List[List[Symbol]]) -> None:
+(157)           symbol = self.visit(ast.init, [[]] +  c)
+(158)           if # TODO: Implement:
+(159)               raise TypeMismatch(ast)
+(160)           self.visit(Block([ast.init] + ast.loop.member + [ast.upda]), c)
+
+(161)      def visitForEach(self, ast: ForEach, c: List[List[Symbol]]) -> None:
+(162)           type_array = self.visit(ast.arr, c)
+(163)           if type(self.visit(ast.arr, c)) != ArrayType:
+(164)              raise TypeMismatch(ast)
+(165)           type_idx = self.visit(ast.idx, c)
+    		## TODO 
+    
+    		type_value = self.visit(ast.value, c)
+    		if not self.checkType(type_value, ## TODO )):
+        		raise TypeMismatch(ast)
+        	self.visit(Block(ast.loop.member), c)
+
+----- visitFuncCall
+- 3 hàng đầu là xử lí trường hợp expr hay stmt được xử lí trong block
+- hàng 187 nếu số lượng param khác nhau
+- hàng 190 kiểu trả kiểu của các param có giống nhau hay không
+- hàng 192-195 nếu stmt yêu cầu type là void và nếu expr yêu cầu khác void
+
+(180)      def visitFuncCall(self, ast: FuncCall, c: Union[List[List[Symbol]], Tuple[List[List[Symbol]], bool]]) -> Type:
+(181)          is_stmt = False
+(182)          if isinstance(c, tuple):
+(183)              c, is_stmt = c
+(184)          
+(185)          res = self.lookup(ast.funName, self.list_function, lambda x: x.name)
+(186)          if res:
+(187)              if len(res.params) != len(ast.args):
+(188)                  raise TypeMismatch(ast)
+(189)              for param, arg in zip(res.params, ast.args):
+(190)                  # TODO: Implement
+(191)          
+(192)              if is_stmt and # TODO: Implement:
+(193)                  raise TypeMismatch(ast)
+(194)              if not is_stmt # TODO: Implement:
+(195)                  raise TypeMismatch(ast)
+(196)              return res.retType
+(197)          raise Undeclared(Function(), ast.funName)
+
+----- visitFieldAccess
+- tìm kiếm field trong elements của structType
+- hàng 201 nếu trả về id thì cần chuyển thành struct/inteface
+- hàng 202 yêu cầu là struct type (không bao gồm inteface)
+(199)      def visitFieldAccess(self, ast: FieldAccess, c: List[List[Symbol]]) -> Type:
+(200)          receiver_type = self.visit(ast.receiver, c)
+(201)          receiver_type = # TODO: Implement
+(202)          if # TODO: Implement:
+(203)              raise TypeMismatch(ast)
+(204)          
+(205)          res = self.lookup(ast.field, receiver_type.elements, lambda x: x[0])
+(206)          if res is None:
+(207)              raise Undeclared(Field(), ast.field)
+(208)          return res[1]
+
+----- visitArrayType
+- duyệt qua danh sách các phần tử
+(250) def visitArrayType(self, ast: ArrayType, c: List[List[Symbol]]):
+(251)     list(map(lambda item: # TODO: Implement, ast.dimens))
+(252)     return ast
+
+----- visitAssign
+- hàng 254 là LHS vế trái
+- hàng 255 là RHS vế phải 
+	def visitAssign(self, ast: Assign, c: List[List[Symbol]]) -> None:
+	    if type(ast.lhs) is Id:
+	        # TÌM KIẾM XEM BIẾN ĐÃ ĐƯỢC KHAI BÁO CHƯA ĐƯỢC KHAI BÁO THÌ TRẢ VỀ Symbol(ast.lhs.name, self.visit(ast.rhs, c), None)
+  
+(254)	    LHS_type = self.visit(ast.lhs, c)
+(255)	    RHS_type = self.visit(ast.rhs, c)
+    	    if not self.checkType(LHS_type, RHS_type, [(FloatType, IntType), (InterfaceType, StructType)]):
+	        raise TypeMismatch(ast)
+
+----- visitIf
+- hàng 260 kiểm tra kiểu điều kiện
+(259)    def visitIf(self, ast: If, c: List[List[Symbol]]) -> None:
+(260)        if # TODO: Implement:
+(261)            raise TypeMismatch(ast)
+(262)        self.visit(Block(ast.thenStmt.member), c)
+(263)        if ast.elseStmt:
+(264)            # TODO: Implement
+
+----- visitReturn
+- so sánh type trả về với function_current (nếu không trả về mặt định vào void)
+(268) def visitReturn(self, ast, c: List[List[Symbol]]) -> None:
+(269)     if not self.checkType(# TODO: Implement, self.function_current.retType):
+(270)         raise TypeMismatch(ast)
+(271)     return None
+
+----- visitBinaryOp và visitUnaryOp
+- kiểm tra kiểu LHS và RHS trước nếu bằng nhau xét đến kiểu bên trong và type trả về
+(272) def visitBinaryOp(self, ast: BinaryOp, c: List[List[Symbol]]):
+(273)     LHS_type = self.visit(ast.left, c)
+(274)     RHS_type = self.visit(ast.right, c)
+(275) 
+(276)     if ast.op in ['+']:
+(277)         if self.checkType(LHS_type, RHS_type, [(IntType, FloatType), (FloatType, IntType)]):
+(278)             if type(LHS_type) == StringType:
+(279)                 return StringType()
+(280)             elif type(LHS_type) == FloatType:
+(281)                 return FloatType()
+(282)             elif type(RHS_type) == FloatType:
+(283)                 return FloatType()
+(284)             elif type(LHS_type) == IntType:
+(285)                 return IntType()
+(286)     # TODO: Implement
+(287)     raise TypeMismatch(ast)
+(288) 
+(289) def visitUnaryOp(self, ast: UnaryOp, c: List[List[Symbol]]):
+(290)     unary_type = self.visit(ast.body, c)
+(291)     # TODO: Implement
+
+----- visitArrayCell
+- hàng 294 visit đến phần tử expr
+- hàng 301 trả về type khi giảm chiều (chiều 0 là type bên trong phần tử)
+- hàng 303 trả về tyep khi giảm chiều
+(293) def visitArrayCell(self, ast: ArrayCell, c: List[List[Symbol]]):
+(294)     array_type = # TODO: Implement
+(295)     if not isinstance(array_type, ArrayType):
+(296)         raise TypeMismatch(ast)
+(297) 
+(298)     if not all(map(lambda item: self.checkType(self.visit(item, c), # TODO: Implement), ast.idx)):
+(299)         raise TypeMismatch(ast)
+(300)     if len(array_type.dimens) == len(ast.idx):
+(301)         return # TODO: Implement
+(302)     elif len(array_type.dimens) > len(ast.idx):
+(303)         return # TODO: Implement
+(304)     raise TypeMismatch(ast)
+
+----- visitArrayLiteral và visitStructLiteral
+- hàng 316 gọi đệ quy
+- hàng 320 có tên rồi tìm type trong list struct/inteface
+(310) def visitArrayLiteral(self, ast: ArrayLiteral, c: List[List[Symbol]]) -> Type:
+(311)     def nested2recursive(dat: Union[Literal, list['NestedList']], c: List[List[Symbol]]):
+(312)         if isinstance(dat, list):
+(313)             return list(map(lambda value: nested2recursive(value, c), dat))
+(314)         else:
+(315)             return self.visit(dat, c)
+(316)     nested2recursive(# TODO: Implement)
+(317)     return ArrayType(ast.dimens, ast.eleType)
+(318) def visitStructLiteral(self, ast: StructLiteral, c: List[List[Symbol]]) -> Type:
+(319)     list(map(lambda value: self.visit(value[1], c), ast.elements))
+(320)     return # TODO: Implement
+
+----- evaluate_ast
+    def evaluate_ast(self, node: AST, c: List[List[Symbol]]) -> int:
+        if type(node) == IntLiteral:
+            return int(node.value)
+        elif type(node) == Id:
+            res =  # TÌM GIÁ TRỊ
+            return
+            ## TODO binary và Unary, các trường hợp còn lại sẽ không hợp lệ vì sẽ không là kiểu int và thầy đã thông báo trên forum
+        return 0

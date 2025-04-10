@@ -1,0 +1,130 @@
+1. KHÁI NIỆM SYMBOL
+   - Lớp Symbol đại diện cho một thực thể trong bảng ký hiệu (symbol table), bao gồm các biến, hằng số, hàm, phương thức, hoặc kiểu dữ liệu.
+   - Mỗi Symbol lưu trữ thông tin về tên, kiểu dữ liệu, và giá trị của nó (nếu có).
+
+   class Symbol:
+       def __init__(self, name, mtype, value=None):
+           self.name = name        # Tên của symbol (biến, hàm, phương thức, v.v.)
+           self.mtype = mtype      # Kiểu dữ liệu hoặc kiểu phương thức/hàm (MType)
+           self.value = value      # Giá trị của symbol (nếu có)
+
+       def __str__(self):
+           return "Symbol(" + str(self.name) + "," + str(self.mtype) + ("" if self.value is None else ...))
+
+   Các thành phần chính:
+   1. name: Là tên của symbol, có thể là tên biến, tên hàm, hoặc tên phương thức.
+   2. mtype (kiểu dữ liệu hoặc kiểu phương thức):
+       - Nếu Symbol là một biến/hằng số: mtype sẽ chứa kiểu dữ liệu của nó (IntType, FloatType, v.v.).
+       - Nếu Symbol là một hàm hoặc phương thức: mtype sẽ là một đối tượng MType, chứa danh sách tham số và kiểu trả về.
+   3. value: btl4 mới dùng tới.
+
+2. VÍ DỤ List[List[Symbol]]
+   Code mẫu:
+       const b = 2;
+       func Votien (b int) {
+           for var a = 1; a < 1; a += 1 {
+               const b = 1;
+           }
+           const a = true;
+       }
+       const a = "3";
+
+   Phân tích từng hàng:
+   1. Hàng 1: Function có phạm vi toàn bộ chương trình, biến toàn cục chỉ có phạm vi từ khi khai báo đến cuối.
+       [
+           [Symbol("b", IntType(), 2), Symbol("Votien", MType([IntType()], VoidType()))]
+       ]
+
+   2. Hàng 2: Param có phạm vi riêng với toàn cục và cục bộ.
+       [
+           [Symbol("b", IntType())],
+           [Symbol("b", IntType(), 2), Symbol("Votien", MType([IntType()], VoidType()))]
+       ]
+
+   3. Hàng 3: Khai báo trong for có một tầm vực khác với block bên ngoài.
+       [
+           [Symbol("a", IntType(), 1)],
+           [],
+           [Symbol("b", IntType())],
+           [Symbol("b", IntType(), 2), Symbol("Votien", MType([IntType()], VoidType()))]
+       ]
+
+   4. Hàng 4: Chung tầm vực với for.
+       [
+           [Symbol("a", IntType(), 1), Symbol("b", IntType(), 1)],
+           [],
+           [Symbol("b", IntType())],
+           [Symbol("b", IntType(), 2), Symbol("Votien", MType([IntType()], VoidType()))]
+       ]
+
+   5. Hàng 5: Tầm vực for bị hủy.
+       [
+           [],
+           [Symbol("b", IntType())],
+           [Symbol("b", IntType(), 2), Symbol("Votien", MType([IntType()], VoidType()))]
+       ]
+
+   6. Hàng 6: Tầm vực của hàm thêm phần tử mới.
+       [
+           [Symbol("a", BoolType(), True)],
+           [Symbol("b", IntType())],
+           [Symbol("b", IntType(), 2), Symbol("Votien", MType([IntType()], VoidType()))]
+       ]
+
+   7. Hàng 7: Tầm vực của hàm và param bị hủy.
+       [
+           [Symbol("b", IntType(), 2), Symbol("Votien", MType([IntType()], VoidType()))]
+       ]
+
+   8. Hàng 8: Tầm vực toàn cục thêm thành viên mới.
+       [
+           [Symbol("b", IntType(), 2), Symbol("Votien", MType([IntType()], VoidType())), Symbol("a", StringType(), "3")]
+       ]
+
+3. SELF.LOOKUP VÀ FP
+   - self.lookup:
+       - Hàm lookup được sử dụng để tìm kiếm một phần tử trong danh sách lst dựa trên một điều kiện do hàm func xác định.
+       - Nếu tìm thấy phần tử có tên trùng với name, nó sẽ trả về phần tử đó. Nếu không tìm thấy, trả về None.
+       def lookup(self, name, lst, func):
+           for x in lst:
+               if name == func(x):
+                   return x
+           return None
+
+       Ví dụ:
+           symbols = [
+               Symbol("x", IntType()),
+               Symbol("y", FloatType()),
+               Symbol("z", BoolType())
+           ]
+           name_to_find = "y"
+           found_symbol = lookup(name_to_find, symbols, lambda x: x.name)
+
+   - Hàm reduce trong Python:
+       - Được dùng để thu gọn một danh sách thành một giá trị duy nhất bằng cách áp dụng một hàm hai đối số tuần tự lên các phần tử.
+       reduce(lambda acc, ele: [[self.visit(ele, acc)] + acc[0]] + acc[1:], ast.member, [[]] + c)
+       - lambda acc, ele: ... – Hàm được áp dụng lặp đi lặp lại.
+           * acc (Accumulator): Là danh sách các scope hiện tại.
+           * ele: Là từng phần tử ast.member.
+       - ast.member: Danh sách các khai báo trong Block.
+       - [[]] + c: Danh sách các scope khởi đầu:
+           * []: Là scope mới trong Block.
+           * +c: Giữ nguyên các scope trước đó (global hoặc function).
+
+4. ATTRIBUTE StaticChecker
+   self.ast = ast
+   self.struct: list[StructType] = []
+   self.inteface: list[InterfaceType] = []
+   self.env = [
+       [],
+       [Symbol("getInt", MType([], IntType())),
+        Symbol("putIntLn", MType([IntType()], VoidType()))]
+   ]
+   self.function_current: FuncDecl = None
+   self.struct_current: StructType = None
+
+   - self.struct: Danh sách các Type struct được khai báo.
+   - self.inteface: Danh sách các Type interface được khai báo.
+   - self.env: Các hàm mặc định của chương trình.
+   - self.function_current: Hàm hiện tại chương trình đang thực thi (đang visit block của hàm nào).
+   - self.struct_current: Phương thức hiện tại chương trình đang thực thi (đang visit với block của phương thức của struct nào).

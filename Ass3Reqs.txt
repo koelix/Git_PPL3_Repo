@@ -1,0 +1,49 @@
+--- Prompt other Field Material
+--- Requirement for this assignment
+- Every test-case has at most one kind of error. The semantics constraints required to check in this assignment are as follows.
+### 2.1 Redeclared Variable/Constant/Parameter/Type/Function/Method/Prototype/Field
+- A declaration must be unique within its scope (as defined in the MiniGo specification).
+- If not unique, the exception `Redeclared(<kind>, <identifier>)` is raised.
+  - `<kind>` can be: Variable, Constant, Parameter, Type, Function, Method, Prototype, or Field.
+- Scopes:
+  - Variables, constants, parameters, functions: Defined in MiniGo specification.
+  - Types: Global scope.
+  - Fields, methods: Limited to the struct they belong to.
+  - Prototypes: Limited to the interface they belong to.
+  - Variable in for loop initialization: Limited to the loop body.
+### 2.2 Undeclared Identifier/Function/Method/Field
+- Exceptions raised when an identifier is used but not declared:
+  - `Undeclared(Identifier(), <identifier-name>)`: For variables, constants, or parameters.
+  - `Undeclared(Function(), <function-name>)`: For undefined functions.
+  - `Undeclared(Method(), <method-name>)`: For undefined methods in the receiver (struct/interface).
+  - `Undeclared(Field(), <field-name>)`: For undefined fields in the struct.
+### 2.3 Type Mismatch
+- An expression/statement must follow MiniGo type rules, or `TypeMismatch(<expression>/<statement>)` is raised.
+- Type Rules:
+  + Assignment Statement:
+    - LHS: Must not be VoidType.
+    - RHS: Must match LHS type, or be integer if LHS is float.
+    - Array LHS: RHS must be an array of same size, with matching or integer-to-float element type.
+    - Interface LHS: RHS can be a struct implementing all interface prototypes.
+    - Undeclared scalar LHS: Implicitly declared with RHS type.
+  + Variable Declaration:
+    - If initialized, declared type and initialization expression must follow assignment rules.
+  + Conditional Expression:
+    - In `if` or `for`: Must be boolean.
+  + For Loop:
+    - Initialization/update: Follow assignment/declaration rules.
+    - Range components: Defined in MiniGo specification.
+  + Function/Method Call:
+    - Call statement: Must invoke a function/method with VoidType return.
+    - Expression call: Must return non-VoidType.
+    - Arguments: Must match parameter count and exact types.
+    - Method receiver: Must be struct or interface type.
+  + Return Statement:
+    - VoidType function: No expression allowed.
+    - Non-VoidType: Expression must match return type.
+  + Array Subscripting:
+    - `E1[E2]...[En]`: E1 must be array type, E2...En must be integer.
+  + Field Access:
+    - `E1.<name>`: E1 must be struct type.
+  + Binary/Unary Expression:
+    - Type rules defined in MiniGo specification.

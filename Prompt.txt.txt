@@ -1,0 +1,350 @@
+Prompt.txt
+--- Task to do and Material
+- You are provide with the StaticCheck.py and CheckSuite.py (which stores testcases)
+- Some other related file is provided at the end of the StaticCheck.py (The AST.py)
+- You are requested to change only the StaticCheck.py (follow the framework already 
+- If there is comment in the code, you must leaves it if it does not conflict the logic. If it is, provide the new comment to replace.
+- When you do each Function, give me a short explain what it do and affect the scope/usage in other function.
+- If there is some function don't use for that testcase, you must write down (and change at least for it to run not bug) / or save the framework for later testcases (This is important)
+
+--- CheckList từng hàm
+- Khởi tạo và điều khiển:
+- - [DONE] `__init__`
+- - [DONE] `check`
+
+- Chương trình và khai báo:
+- - [TODO] `visitProgram`
+- - [TODO] `visitStructType`
+- - [TODO] `visitPrototype`
+- - [DONE] `visitInterfaceType`
+- - [TODO] `visitFuncDecl`
+- - [TODO] `visitParamDecl`
+- - [TODO] `visitMethodDecl`
+- - [DONE] `visitVarDecl`
+- - [TODO] `visitConstDecl`
+- - [DONE] `visitBlock`
+
+- Vòng lặp:
+- - [TODO] `visitForBasic`
+- - [TODO] `visitForStep`
+- - [TODO] `visitForEach`
+
+- Biểu thức và truy cập:
+- - [TODO] `visitId`
+- - [TODO] `visitFuncCall`
+- - [TODO] `visitFieldAccess`
+- - [TODO] `visitMethCall`
+- - [TODO] `visitAssign`
+- - [TODO] `visitBinaryOp`
+- - [TODO] `visitUnaryOp`
+- - [TODO] `visitArrayCell`
+
+- Kiểu dữ liệu:
+- - [TODO] `checkType`
+- - [DONE] `visitIntType`
+- - [DONE] `visitFloatType`
+- - [DONE] `visitBoolType`
+- - [DONE] `visitStringType`
+- - [TODO] `visitArrayType`
+
+- Literal:
+- - [DONE] `visitIntLiteral`
+- - [DONE] `visitFloatLiteral`
+- - [DONE] `visitBooleanLiteral`
+- - [DONE] `visitStringLiteral`
+- - [TODO] `visitArrayLiteral`
+- - [TODO] `visitStructLiteral`
+- - [DONE] `visitNilLiteral`
+
+- Điều khiển luồng:
+- - [TODO] `visitIf`
+- - [DONE] `visitContinue`
+- - [DONE] `visitBreak`
+- - [TODO] `visitReturn`
+
+- Hỗ trợ tính toán:
+- - [TODO] `evaluate_ast`
+- - [DONE] `visitVoidType`
+
+--- Workflow of the code
+Must have the c (Stack) explain how it work
+Others thing like type and storage type/attribute, ....
+
+--- Grok Work Flow
+--- Workflow của chương trình StaticChecker
+
+## Tổng quan
+- Chương trình StaticChecker là một trình kiểm tra tĩnh (static checker) được thiết kế để phân tích mã nguồn thông qua cây cú pháp trừu tượng (AST - Abstract Syntax Tree).
+- Workflow chính bắt đầu từ hàm `check`, gọi `visit` trên AST của chương trình, sau đó phân tích từng phần tử trong AST bằng cách sử dụng các hàm `visit` tương ứng.
+- Quản lý scope (phạm vi) được thực hiện thông qua **stack c**, một danh sách các scope, với scope hiện tại luôn nằm ở đầu stack.
+- Mục tiêu: Kiểm tra tính hợp lệ của mã nguồn, bao gồm kiểu dữ liệu, khai báo, truy cập, và điều khiển luồng.
+
+## Cấu trúc của Workflow
+- Workflow được chia thành các giai đoạn chính:
+  - **Khởi tạo**: Thiết lập các thuộc tính ban đầu.
+  - **Xử lý chương trình**: Phân tích các khai báo cấp cao nhất.
+  - **Xử lý chi tiết**: Xử lý từng loại khai báo, biểu thức, câu lệnh, v.v.
+  - **Quản lý scope**: Sử dụng stack `c` để theo dõi các biến và phạm vi.
+
+### 1. Khởi tạo
+- Hàm thực thi: `__init__` và `check`
+- Mô tả:
+  - `__init__`: Khởi tạo các thuộc tính quan trọng:
+    - `self.list_type`: Lưu danh sách các kiểu Struct và Interface.
+    - `self.list_function`: Lưu danh sách các hàm toàn cục (bao gồm các hàm mặc định như `getInt`, `putIntLn`).
+    - `self.function_current`: Theo dõi hàm hiện tại (ban đầu là None).
+    - Stack `c` chưa được khởi tạo ở đây, mà sẽ được tạo khi bắt đầu phân tích.
+  - `check`: Điểm bắt đầu chính, gọi `visit` trên AST với tham số ban đầu là None.
+- Vai trò trong stack `c`:
+  - Chưa có thay đổi nào với stack `c` ở giai đoạn này.
+
+### 2. Xử lý chương trình (visitProgram)
+- Hàm thực thi: `visitProgram`
+- Mô tả:
+  - Xử lý toàn bộ các khai báo cấp cao nhất trong chương trình (struct, interface, hàm, biến, hằng).
+  - Thu thập thông tin vào `self.list_type` và `self.list_function`.
+  - Liên kết các phương thức với struct tương ứng.
+  - Kiểm tra xung đột tên giữa các khai báo.
+  - Khởi tạo stack `c` ban đầu với scope toàn cục.
+- Vai trò trong stack `c`:
+  - Tạo scope toàn cục (`symbol_table`) chứa các hàm mặc định và các khai báo toàn cục.
+  - Thêm các symbol (biến, hằng, hàm) vào scope toàn cục.
+  - Ví dụ: `[Symbol("getInt", FunctionType()), Symbol("b", IntType(), 2)]`.
+
+### 3. Xử lý các khai báo chi tiết
+#### 3.1. Struct (visitStructType)
+- Mô tả:
+  - Kiểm tra tên struct không trùng lặp trong `self.list_type`.
+  - Xử lý các trường (fields) của struct, đảm bảo không có trường nào trùng tên.
+  - Thêm struct vào `self.list_type`.
+- Vai trò trong stack `c`:
+  - Không thay đổi trực tiếp stack `c`, chỉ cập nhật `self.list_type`.
+
+#### 3.2. Interface (visitInterfaceType)
+- Mô tả:
+  - Kiểm tra tên interface không trùng lặp trong `self.list_type`.
+  - Xử lý các prototype (nguyên mẫu phương thức), đảm bảo không trùng tên.
+  - Thêm interface vào `self.list_type`.
+- Vai trò trong stack `c`:
+  - Không thay đổi trực tiếp stack `c`.
+
+#### 3.3. Hàm (visitFuncDecl)
+- Mô tả:
+  - Kiểm tra tên hàm không trùng lặp trong scope toàn cục.
+  - Thiết lập `self.function_current` là hàm hiện tại.
+  - Xử lý các tham số và thân hàm (block).
+  - Thêm hàm vào `self.list_function`.
+- Vai trò trong stack `c`:
+  - Tạo scope mới cho tham số hàm: `[params] + c`.
+  - Gọi `visitBlock` để xử lý thân hàm với scope mới.
+  - Sau khi xử lý xong, scope tham số bị xóa.
+
+#### 3.4. Phương thức (visitMethodDecl)
+- Mô tả:
+  - Tìm struct tương ứng và liên kết phương thức.
+  - Thiết lập `self.function_current` là hàm của phương thức.
+  - Xử lý tham số (bao gồm receiver) và thân phương thức.
+- Vai trò trong stack `c`:
+  - Tạo scope mới chứa receiver và tham số: `[params] + c`.
+  - Gọi `visitBlock` để xử lý thân phương thức.
+  - Scope bị xóa sau khi xử lý xong.
+
+#### 3.5. Biến (visitVarDecl)
+- Mô tả:
+  - Kiểm tra tên biến không trùng trong scope hiện tại.
+  - Xác định kiểu của biến (từ khai báo hoặc giá trị khởi tạo).
+  - Thêm symbol biến vào scope hiện tại.
+- Vai trò trong stack `c`:
+  - Thêm `Symbol(name, type)` vào `c[0]` (scope hiện tại).
+
+#### 3.6. Hằng số (visitConstDecl)
+- Mô tả:
+  - Kiểm tra tên hằng không trùng trong scope hiện tại.
+  - Đảm bảo có giá trị khởi tạo và kiểm tra kiểu hợp lệ.
+  - Thêm symbol hằng vào scope hiện tại.
+- Vai trò trong stack `c`:
+  - Thêm `Symbol(name, type, value)` vào `c[0]`.
+
+### 4. Xử lý khối lệnh (visitBlock)
+- Mô tả:
+  - Tạo scope mới cho khối lệnh.
+  - Xử lý từng thành viên trong khối (khai báo, câu lệnh).
+- Vai trò trong stack `c`:
+  - Thêm scope mới vào đầu stack: `[[]] + c`.
+  - Thêm các symbol từ khai báo vào `c[0]`.
+  - Sau khi xử lý xong, scope mới bị xóa khỏi stack.
+
+### 5. Xử lý vòng lặp
+#### 5.1. For cơ bản (visitForBasic)
+- Mô tả:
+  - Kiểm tra điều kiện là kiểu Bool.
+  - Xử lý thân vòng lặp.
+- Vai trò trong stack `c`:
+  - Không tạo scope mới, sử dụng scope hiện tại.
+
+#### 5.2. For với bước lặp (visitForStep)
+- Mô tả:
+  - Xử lý phần khởi tạo, điều kiện, cập nhật, và thân vòng lặp.
+- Vai trò trong stack `c`:
+  - Tạo scope mới cho biến khởi tạo: `[[init_symbol]] + c`.
+  - Scope bị xóa sau khi vòng lặp kết thúc.
+
+#### 5.3. For each (visitForEach)
+- Mô tả:
+  - Kiểm tra `arr` là mảng.
+  - Tạo biến `idx` và `value` với kiểu phù hợp.
+  - Xử lý thân vòng lặp.
+- Vai trò trong stack `c`:
+  - Tạo scope mới chứa `idx` và `value`: `[symbols] + c`.
+  - Scope bị xóa sau khi vòng lặp kết thúc.
+
+### 6. Xử lý biểu thức và truy cập
+#### 6.1. Identifier (visitId)
+- Mô tả:
+  - Tìm symbol trong stack `c` từ scope hiện tại ra ngoài.
+  - Trả về kiểu của symbol.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack, chỉ tra cứu.
+
+#### 6.2. Gọi hàm (visitFuncCall)
+- Mô tả:
+  - Tìm hàm trong `self.list_function`.
+  - Kiểm tra số lượng và kiểu đối số.
+  - Trả về kiểu trả về của hàm.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack, chỉ tra cứu đối số.
+
+#### 6.3. Truy cập trường (visitFieldAccess)
+- Mô tả:
+  - Xác định kiểu của receiver (phải là Struct).
+  - Tìm trường trong struct và trả về kiểu của trường.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+#### 6.4. Gọi phương thức (visitMethCall)
+- Mô tả:
+  - Xác định kiểu của receiver (Struct hoặc Interface).
+  - Tìm phương thức và kiểm tra đối số.
+  - Trả về kiểu trả về.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+#### 6.5. Phép gán (visitAssign)
+- Mô tả:
+  - Kiểm tra kiểu của LHS và RHS tương thích.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack, chỉ tra cứu kiểu.
+
+#### 6.6. Toán tử nhị phân (visitBinaryOp)
+- Mô tả:
+  - Kiểm tra kiểu của hai toán hạng.
+  - Trả về kiểu kết quả dựa trên toán tử.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+#### 6.7. Toán tử đơn (visitUnaryOp)
+- Mô tả:
+  - Kiểm tra kiểu của toán hạng.
+  - Trả về kiểu kết quả.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+#### 6.8. Truy cập phần tử mảng (visitArrayCell)
+- Mô tả:
+  - Kiểm tra `arr` là mảng, các chỉ số là kiểu Int.
+  - Trả về kiểu phần tử hoặc mảng con.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+### 7. Xử lý kiểu dữ liệu
+#### 7.1. Kiểm tra kiểu (checkType)
+- Mô tả:
+  - So sánh hai kiểu có tương thích không (xử lý nil, ép kiểu ngầm định).
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+#### 7.2. Các kiểu nguyên thủy (visitIntType, visitFloatType, visitBoolType, visitStringType, visitVoidType)
+- Mô tả:
+  - Trả về chính kiểu đó.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+#### 7.3. Kiểu mảng (visitArrayType)
+- Mô tả:
+  - Kiểm tra các chiều của mảng hợp lệ.
+  - Trả về kiểu mảng.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+### 8. Xử lý literal
+#### 8.1. Literal cơ bản (visitIntLiteral, visitFloatLiteral, visitBooleanLiteral, visitStringLiteral)
+- Mô tả:
+  - Trả về kiểu tương ứng (IntType, FloatType, BoolType, StringType).
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+#### 8.2. Mảng literal (visitArrayLiteral)
+- Mô tả:
+  - Kiểm tra kiểu của các phần tử.
+  - Trả về kiểu mảng.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+#### 8.3. Struct literal (visitStructLiteral)
+- Mô tả:
+  - Tìm struct tương ứng.
+  - Kiểm tra các trường và kiểu của chúng.
+  - Trả về kiểu struct.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+#### 8.4. Nil literal (visitNilLiteral)
+- Mô tả:
+  - Trả về kiểu đặc biệt cho nil (StructType rỗng).
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+### 9. Xử lý điều khiển luồng
+#### 9.1. If (visitIf)
+- Mô tả:
+  - Kiểm tra điều kiện là Bool.
+  - Xử lý then và else (nếu có).
+- Vai trò trong stack `c`:
+  - Không tạo scope mới, sử dụng scope hiện tại.
+
+#### 9.2. Continue và Break (visitContinue, visitBreak)
+- Mô tả:
+  - Hiện không làm gì đặc biệt.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+#### 9.3. Return (visitReturn)
+- Mô tả:
+  - Kiểm tra kiểu của biểu thức return khớp với kiểu trả về của hàm.
+- Vai trò trong stack `c`:
+  - Không thay đổi stack.
+
+### 10. Quản lý stack `c`
+- Mô tả:
+  - Stack `c` là danh sách các scope, với `c[0]` là scope hiện tại.
+  - Khi vào block mới (hàm, vòng lặp, khối lệnh), một scope mới được thêm vào đầu stack: `[[]] + c`.
+  - Khi ra khỏi block, scope đầu tiên bị xóa, quay lại scope trước đó.
+  - Ví dụ:
+    - Ban đầu: `[[Symbol("b", IntType(), 2)]]` (scope toàn cục).
+    - Vào hàm: `[[Symbol("param", IntType())], [Symbol("b", IntType(), 2)]]`.
+    - Vào block trong hàm: `[[Symbol("local", IntType())], [Symbol("param", IntType())], [Symbol("b", IntType(), 2)]]`.
+    - Ra khỏi block: `[[Symbol("param", IntType())], [Symbol("b", IntType(), 2)]]`.
+
+### 11. Ví dụ luồng xử lý
+- Code mẫu:
+  const b = 2;
+  func Votien(b int) {
+      var a = 1;
+  }
+- Luồng:
+  - `visitProgram`: Tạo scope toàn cục `[Symbol("b", IntType(), 2), Symbol("Votien", MType([IntType()], VoidType()))]`.
+  - `visitFuncDecl`: Tạo scope mới `[Symbol("b", IntType())] + c`, xử lý thân hàm.
+  - `visitBlock`: Tạo scope mới `[Symbol("a", IntType())] + c`, sau đó xóa scope này.
+  - Kết thúc hàm: Xóa scope tham số, quay lại scope toàn cục.
+
+--- Kết thúc Workflow của chương trình StaticChecker

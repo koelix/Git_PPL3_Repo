@@ -1,0 +1,53 @@
+## PPL Prompt Guide
+# Phase 1: Building the foundation 
+Collect requirement from:
+		- Func.txt : Main feature of the Functions through out the code
+	The workflow:
+		- Code from Danh
+		- Task1.txt (The Task1.pdf from VOTIEN)
+=> Must check if that is any conflict, or you don't understand
+
+# Phase 2: Chuẩn hóa yêu cầu vào thành DoD
+DoD: + Foundation Code with
+	- Comment explain
+     + Prompt Guide that include the workflow of the code
+
+Test xem gửi các file đính kèm chạy nhanh hơn hay là tống file kèm xuống comment nhanh hơn
+
+# Phase 3: Test and Prompt
+Run and test
+Provide GPT the result and the bug
+Prompt again using Prompt.txt
+
+# Phase 4: Finish
+
+
+Phase 1 Material:
+- Function to do:
+	- visitAssign
+	- visitProgram
+- Các Update:
+	- Update 28/3
+		Var
+		Xong Program
+		Array
+		Const
+		evaluate_ast
+	- Update 29/5
+		visitAssign
+	- Update 3/4
+		Reciever
+		For and Block
+		VarDecl ...
+	- Update 6/4
+		Gợi Ý
+		sẽ triển khai ở bước trước khi duyệt cục bộ (sau bước visitMethodDecl trong visitProgram)
+		dùng Python Dictionaries để triển khai
+			dictionaries_struct[name struct] = [list name method and field]
+	- Update 7/4
+		FIELD sẽ được đưa vào Struct trước METHOD
+		visitProgram.visitMethodDecl chỉ cần thêm một lệnh kiểm tra ast.fun.name có trong c.elements
+		Function sẽ bị che lại nếu trong trong có khai báo bại tên function đó
+		thêm kiểm tra tên function có trong Symbol hay không giống visitID
+	- Update 10/4
+		visitForEach
