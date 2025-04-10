@@ -138,22 +138,36 @@ class StaticChecker(BaseVisitor,Utils):
         if not res is None:
             raise Redeclared(Prototype(), ast.name)
         return ast
-        # TODO: Implement - Done
+        # TODO: Implement - Done đi tìm Redeclared Prototype của Interface
 
     def visitInterfaceType(self, ast: InterfaceType, c : List[Union[StructType, InterfaceType]]) -> InterfaceType:
+        # Check tên của Interface xem trùng không
         res = self.lookup(ast.name, c, lambda x: x.name)
         if not res is None:
             raise Redeclared(StaticErrorType(), ast.name)
+        # Check tên của từng Prototype con xem có trùng không
         ast.methods = reduce(lambda acc,ele: [self.visit(ele,acc)] + acc , ast.methods , [])
         return ast
 
     def visitFuncDecl(self, ast: FuncDecl, c : List[List[Symbol]]) -> Symbol:
-        # TODO: Implement
+        # kiểm tra xem Symbol có chung tên đã tồn tại trong tầm vực hiện tại hay chưa
+        # TODO: Implement - Done 0 đi tìm
+        # c hay c[0] ?? Do nó nói là tầm vực hiện tại thay vì tầm vực global
+        res = self.lookup(ast.name, c[0], lambda x: x.name)
+        if not res is None:
+            raise Redeclared(Function(), ast.name)
+        # visit block và lấy ra danh sách param và chuyển thành Symbol trong tầm vực mới
         self.visit(ast.body, [list(reduce(lambda acc,ele: [self.visit(ele,acc)] + acc, ast.params, []))] + c)
-        return # TODO: Implement
+        # trả về Symbol tương ứng với Type là FuntionType
+        return Symbol(ast.name, ast.retType, None)
+        # TODO: Implement - Done Trả về Symbol của Symbol()
 
     def visitParamDecl(self, ast: ParamDecl, c: list[Symbol]) -> Symbol:
-        # TODO: Implement
+        # - kiểm tra xem đã có Symbol nào trùng tên hay chưa để nén ra lỗi Redeclared
+        # TODO: Implement - Done
+        res = self.lookup(ast.parName, c, lambda x: x.name)
+        if not res is None:
+            raise Redeclared(Parameter(), ast.parName)
         return Symbol(ast.parName, ast.parType, None)
 
     def visitMethodDecl(self, ast: MethodDecl, c : List[List[Symbol]]) -> None:
