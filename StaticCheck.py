@@ -130,7 +130,7 @@ class StaticChecker(BaseVisitor,Utils):
                 Symbol("putString", FuntionType()),
                 Symbol("putStringLn", FuntionType()),
                 Symbol("putLn", FuntionType())
-                # TODO: Implement - DONE
+                # TO DO: Implement - DONE
             ]]
         )
 
@@ -139,8 +139,11 @@ class StaticChecker(BaseVisitor,Utils):
         res = None # TODO: Implement
 
         def visitElements(element: Tuple[str,Type], c: List[Tuple[str,Type]]) -> Tuple[str,Type]:
-            pass
-            # TODO: Implement
+            res = self.lookup(element[0], c, lambda x: x[0])
+            if not res is None:
+                raise Redeclared(Field(), element[0])
+            return element
+            # TO DO: Implement
             # dùng để đệ quy cho elements để tìm lỗi Redeclared
 
         ast.elements = reduce(lambda acc,ele: [visitElements(ele,acc)] + acc , ast.elements , [])
@@ -152,7 +155,7 @@ class StaticChecker(BaseVisitor,Utils):
         if not res is None:
             raise Redeclared(Prototype(), ast.name)
         return ast
-        # TODO: Implement - Done đi tìm Redeclared Prototype của Interface
+        # TO DO: Implement - Done đi tìm Redeclared Prototype của Interface
 
     def visitInterfaceType(self, ast: InterfaceType, c : List[Union[StructType, InterfaceType]]) -> InterfaceType:
         # Check tên của Interface xem trùng không
@@ -165,7 +168,7 @@ class StaticChecker(BaseVisitor,Utils):
 
     def visitFuncDecl(self, ast: FuncDecl, c : List[List[Symbol]]) -> Symbol:
         # kiểm tra xem Symbol có chung tên đã tồn tại trong tầm vực hiện tại hay chưa
-        # TODO: Implement - Done 0 đi tìm
+        # TO DO: Implement - Done 0 đi tìm
         # c hay c[0] ?? Do nó nói là tầm vực hiện tại thay vì tầm vực global
         res = self.lookup(ast.name, c[0], lambda x: x.name)
         if not res is None:
@@ -182,11 +185,11 @@ class StaticChecker(BaseVisitor,Utils):
 
         # trả về Symbol tương ứng với Type là FuntionType
         return Symbol(ast.name, ast.retType, None)
-        # TODO: Implement - Done Trả về Symbol của Symbol()
+        # TO DO: Implement - Done Trả về Symbol của Symbol()
 
     def visitParamDecl(self, ast: ParamDecl, c: list[Symbol]) -> Symbol:
         # - kiểm tra xem đã có Symbol nào trùng tên hay chưa để nén ra lỗi Redeclared
-        # TODO: Implement - Done
+        # TO DO: Implement - Done
         res = self.lookup(ast.parName, c, lambda x: x.name)
         if not res is None:
             raise Redeclared(Parameter(), ast.parName)
@@ -197,6 +200,7 @@ class StaticChecker(BaseVisitor,Utils):
         # TODO: Implement
 
     def visitVarDecl(self, ast: VarDecl, c : List[List[Symbol]]) -> Symbol:
+        # Check có rùi bị trùng
         res = self.lookup(ast.varName, c[0], lambda x: x.name)
         if not res is None:
             raise Redeclared(Variable(), ast.varName)
@@ -219,7 +223,7 @@ class StaticChecker(BaseVisitor,Utils):
         #     conName: str
         #     conType: Type  # None if there is no type
         #     iniExpr: Expr
-        # TODO: Implement
+        # TO DO: Implement - Done
         res = self.lookup(ast.conName, c[0], lambda x: x.name)
         if not res is None:
             raise Redeclared(Constant(), ast.conName)
@@ -363,7 +367,6 @@ class StaticChecker(BaseVisitor,Utils):
                 return # TODO: Implement
         raise Undeclared(Method(), ast.metName)
 
-
     def visitIntType(self, ast, c: List[List[Symbol]]) -> Type: return ast
     def visitFloatType(self, ast, c: List[List[Symbol]])-> Type: return ast
     def visitBoolType(self, ast, c: List[List[Symbol]])-> Type: return ast
@@ -456,12 +459,16 @@ class StaticChecker(BaseVisitor,Utils):
     def visitBooleanLiteral(self, ast, c: List[List[Symbol]]) -> Type: return BoolType()
     def visitStringLiteral(self, ast, c: List[List[Symbol]]) -> Type: return StringType()
     def visitArrayLiteral(self, ast:ArrayLiteral , c: List[List[Symbol]]) -> Type:
+        # 	dimens: List[Expr]
+        # 	eleType: Type
+        # 	value: NestedList
         def nested2recursive(dat: Union[Literal, list['NestedList']], c: List[List[Symbol]]):
             if isinstance(dat,list):
                 list(map(lambda value: nested2recursive(value, c), dat))
             else:
                 self.visit(dat, c)
-        nested2recursive()# TODO: Implement)
+        # nested2recursive() # TODO: Implement)
+        # nested2recursive(ast.value,c) # TODO: Implement)
         return ArrayType(ast.dimens, ast.eleType)
     def visitStructLiteral(self, ast:StructLiteral, c: List[List[Symbol]]) -> Type:
         list(map(lambda value: self.visit(value[1], c), ast.elements))
