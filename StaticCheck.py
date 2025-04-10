@@ -30,13 +30,24 @@ class StaticChecker(BaseVisitor,Utils):
         self.ast = ast
         self.list_type: List[Union[StructType, InterfaceType]] = []
         self.list_function: List[FuncDecl] =  [
-                FuncDecl("getInt", [], IntType(), Block([])),
-                FuncDecl("putInt", [ParamDecl("VOTIEN", IntType())], VoidType(), Block([])),
-                FuncDecl("putIntLn", [ParamDecl("VOTIEN", IntType())], VoidType(), Block([])),
-                FuncDecl("getString", [], IntType(), Block([])),
-                FuncDecl("putString", [ParamDecl("VOTIEN", IntType())], VoidType(), Block([])),
-                FuncDecl("putStringLn", [ParamDecl("VOTIEN", StringType())], VoidType(), Block([]))
-            ]
+            FuncDecl("getInt", [], IntType(), Block([])),
+            FuncDecl("putInt", [ParamDecl("VOTIEN", IntType())], VoidType(), Block([])),
+            FuncDecl("putIntLn", [ParamDecl("VOTIEN", IntType())], VoidType(), Block([])),
+
+            FuncDecl("getFloat", [], FloatType(), Block([])),
+            FuncDecl("putFloat", [ParamDecl("VOTIEN", FloatType())], VoidType(), Block([])),
+            FuncDecl("putFloatLn", [ParamDecl("VOTIEN", FloatType())], VoidType(), Block([])),
+
+            FuncDecl("getBool", [], BoolType(), Block([])),
+            FuncDecl("putBool", [ParamDecl("VOTIEN", BoolType())], VoidType(), Block([])),
+            FuncDecl("putBoolLn", [ParamDecl("VOTIEN", BoolType())], VoidType(), Block([])),
+
+            FuncDecl("getString", [], StringType(), Block([])),
+            FuncDecl("putString", [ParamDecl("VOTIEN", StringType())], VoidType(), Block([])),
+            FuncDecl("putStringLn", [ParamDecl("VOTIEN", StringType())], VoidType(), Block([])),
+
+            FuncDecl("putLn", [], VoidType(), Block([]))
+        ]
         self.function_current: FuncDecl = None
 
     def check(self):
@@ -62,6 +73,7 @@ class StaticChecker(BaseVisitor,Utils):
 
     def visitProgram(self, ast: Program,c : None):
         def visitMethodDecl(ast: MethodDecl, c: StructType) -> MethodDecl:
+            pass
             # TODO: Implement
 
         list_str = ["getInt", "putInt", "putIntLn", "getFloat", "putFloat", "putFloatLn", "getBool", "putBool", "putBoolLn", "getString", "putString", "putStringLn", "putLn"]
@@ -87,23 +99,10 @@ class StaticChecker(BaseVisitor,Utils):
 
         # duyệt qua các khai báo gồm method/function/var và chỉ có function/method trả về Symbol để cập vào bảng Symbol
         reduce(
+            # NẾU LÀ Symbol mới được đưa vào bảng Symbol và cập nhật phần tử trả về tại trí đầu của bảng Symbol
             lambda acc, ele: [
                 ([result] + acc[0]) if isinstance(result := self.visit(ele, acc), Symbol) else acc[0]
             ] + acc[1:],
-            filter(lambda item: isinstance(item, Decl), ast.decl),
-            [[
-                Symbol("getInt", FuntionType()),
-                Symbol("putInt", FuntionType()),
-                Symbol("putIntLn", FuntionType()),
-                # TODO: Implement
-            ]]
-        )
-
-        reduce(
-            # NẾU LÀ Symbol mới được đưa vào bảng Symbol và cập nhật phần tử trả về tại trí đầu của bảng Symbol
-            lambda acc, ele: [
-                                 ([result] + acc[0]) if isinstance(result := self.visit(ele, acc), Symbol) else acc[0]
-                             ] + acc[1:],
             # LỌC RA method/function/var
             filter(lambda item: isinstance(item, Decl), ast.decl),
             # TẦM VỰC ĐẦU TIÊN SẼ LÀ DANH SÁCH CÁC HÀM
@@ -111,7 +110,17 @@ class StaticChecker(BaseVisitor,Utils):
                 Symbol("getInt", FuntionType()),
                 Symbol("putInt", FuntionType()),
                 Symbol("putIntLn", FuntionType()),
-                # TODO: Implement
+                Symbol("getFloat", FuntionType()),
+                Symbol("putFloat", FuntionType()),
+                Symbol("putFloatLn", FuntionType()),
+                Symbol("getBool", FuntionType()),
+                Symbol("putBool", FuntionType()),
+                Symbol("putBoolLn", FuntionType()),
+                Symbol("getString", FuntionType()),
+                Symbol("putString", FuntionType()),
+                Symbol("putStringLn", FuntionType()),
+                Symbol("putLn", FuntionType())
+                # TODO: Implement - DONE
             ]]
         )
 

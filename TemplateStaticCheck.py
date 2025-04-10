@@ -103,7 +103,6 @@ class StaticChecker(BaseVisitor,Utils):
                 Symbol("putLn", FuntionType())
                 # TODO: Implement - DONE
             ]]
-
         )
 
     def visitStructType(self, ast: StructType, c : List[Union[StructType, InterfaceType]]) -> StructType:
