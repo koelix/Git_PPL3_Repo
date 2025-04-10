@@ -171,6 +171,7 @@ class StaticChecker(BaseVisitor,Utils):
         return Symbol(ast.parName, ast.parType, None)
 
     def visitMethodDecl(self, ast: MethodDecl, c : List[List[Symbol]]) -> None:
+        pass
         # TODO: Implement
 
     def visitVarDecl(self, ast: VarDecl, c : List[List[Symbol]]) -> Symbol:
@@ -191,6 +192,7 @@ class StaticChecker(BaseVisitor,Utils):
 
 
     def visitConstDecl(self, ast: ConstDecl, c : List[List[Symbol]]) -> Symbol:
+        pass
         # TODO: Implement
 
     def visitBlock(self, ast: Block, c: List[List[Symbol]]) -> None:
@@ -202,31 +204,50 @@ class StaticChecker(BaseVisitor,Utils):
                 acc[0] = [result] + acc[0]
 
     def visitForBasic(self, ast: ForBasic, c : List[List[Symbol]]) -> None:
-        if # TODO: Implement:
-            raise TypeMismatch(ast)
-        self.visit(ast.loop, c)
+        pass
+        # if # TODO: Implement:
+        #     raise TypeMismatch(ast)
+        # self.visit(ast.loop, c)
 
     def visitForStep(self, ast: ForStep, c: List[List[Symbol]]) -> None:
         symbol = self.visit(ast.init, [[]] +  c)
-        if # TODO: Implement:
-            raise TypeMismatch(ast)
-        self.visit(Block([ast.init] + ast.loop.member + [ast.upda]), c)
+        pass
+        # if # TODO: Implement:
+        #     raise TypeMismatch(ast)
+        # self.visit(Block([ast.init] + ast.loop.member + [ast.upda]), c)
 
     def visitForEach(self, ast: ForEach, c: List[List[Symbol]]) -> None:
         type_array = self.visit(ast.arr, c)
-        if # TODO: Implement:
-            raise TypeMismatch(ast)
+        pass
+        # if # TODO: Implement:
+        #     raise TypeMismatch(ast)
+        #
+        # self.visit(Block([VarDecl(# TODO: Implement),
+        #                   VarDecl(ast.value.name,
+        #                           # TODO: Implement,
+        #                             None)] + ast.loop.member)
+        #                   , c)
 
-        self.visit(Block([VarDecl(# TODO: Implement),
-                          VarDecl(ast.value.name,
-                                  # TODO: Implement,
-                                    None)] + ast.loop.member)
-                          , c)
+    # def visitId(self, ast: Id, c: List[List[Symbol]]) -> Type:
+    #     # Tìm kiếm phần tử trùng tên trong bảng Symbol
+    #     res = # TODO: Implement
+    #     if res and not isinstance(res.mtype, Function):
+    #         return res.mtype
+    #     raise Undeclared(Identifier(), ast.name)
+    #
+    # def visitId(self, ast: Id, c: List[List[Symbol]]) -> Type:
+    #     # Tìm kiếm phần tử trùng tên trong bảng Symbol
+    #     res = next(filter(None,  # TODO: Implement), None)
+    #         if res and not isinstance(res.mtype, Function):
+    #             # trả mtype nếu không phải kiểu Id còn kiểu id thì trả về inteface/struct
+    #             return res.mtype if not isinstance(res.mtype, Id) else  # TODO: Implement
+    #     raise Undeclared(Identifier(), ast.name)
 
-    def visitId(self, ast: Id, c: List[List[Symbol]]) -> Type:
-        res = # TODO: Implement
-        if res and not isinstance(res.mtype, Function):
-            return res.mtype
+    def visitId(self, ast: Id, c: list[list[Symbol]]) -> Type:
+        for sublist in c:  # Iterate over all sublists in c
+            res: Symbol = next(filter(lambda x: x.name == ast.name, sublist), None)
+            if res and not isinstance(res.mtype, Function):
+                return res.mtype if not isinstance(res.mtype, Id) else self.lookup(res.mtype.name, self.list_type, lambda x: x.name)
         raise Undeclared(Identifier(), ast.name)
 
     def visitFuncCall(self, ast: FuncCall, c: Union[List[List[Symbol]], Tuple[List[List[Symbol]], bool]]) -> Type:
