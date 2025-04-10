@@ -15,7 +15,6 @@ class FuntionType(Type):
     def accept(self, v, param):
         return v.visitFuntionType(self, v, param)
 
-
 class Symbol:
     def __init__(self,name,mtype,value = None):
         self.name = name
@@ -134,7 +133,12 @@ class StaticChecker(BaseVisitor,Utils):
         return ast
 
     def visitPrototype(self, ast: Prototype, c: List[Prototype]) -> Prototype:
-        # TODO: Implement
+        # Kiểm tra xem đã có Prototype nào trùng tên hay chưa để nén ra lỗi Redeclared
+        res = self.lookup(ast.name, c, lambda x: x.name)
+        if not res is None:
+            raise Redeclared(Prototype(), ast.name)
+        return ast
+        # TODO: Implement - Done
 
     def visitInterfaceType(self, ast: InterfaceType, c : List[Union[StructType, InterfaceType]]) -> InterfaceType:
         res = self.lookup(ast.name, c, lambda x: x.name)
