@@ -63,6 +63,7 @@ class StaticChecker(BaseVisitor,Utils):
         RHS_type = self.lookup(RHS_type.name, self.list_type, lambda x: x.name) if isinstance(RHS_type, Id) else RHS_type
 
         # kiểm tra các cặp cho phép có thể float = int, inteface = struct
+        # Những cái này được gọi từ VarDecl, ConstDecl và Assign
         if (type(LSH_type), type(RHS_type)) in list_type_permission:
             if isinstance(LSH_type, InterfaceType) and isinstance(RHS_type, StructType):
                 # nếu mà inteface = struct cần phải kiểm tra các hàm trong inface có trong struct hay không (bao gồm return, params, name)
@@ -211,10 +212,28 @@ class StaticChecker(BaseVisitor,Utils):
             return Symbol(ast.varName, LHS_type, None)
         raise TypeMismatch(ast)
 
-
     def visitConstDecl(self, ast: ConstDecl, c : List[List[Symbol]]) -> Symbol:
-        pass
+        # Same logic as VarDecl, differ from VarDecl, noType is given since the Decl, so no typeCheck, need type Infer only
+        # const_decl      : CONST ID ASSIGN_OP expr;
+        # class ConstDecl(Decl, BlockMember):
+        #     conName: str
+        #     conType: Type  # None if there is no type
+        #     iniExpr: Expr
         # TODO: Implement
+        res = self.lookup(ast.conName, c[0], lambda x: x.name)
+        if not res is None:
+            raise Redeclared(Constant(), ast.conName)
+
+        LHS_type = ast.conType if ast.conType else None
+        RHS_type = self.visit(ast.iniExpr, c) if ast.iniExpr else None
+
+        if RHS_type is None:
+            return Symbol(ast.conName, LHS_type, None)
+        elif LHS_type is None:
+            return Symbol(ast.conName, RHS_type, None)
+        elif self.checkType(LHS_type, RHS_type, [(FloatType, IntType), (InterfaceType, StructType)]):
+            return Symbol(ast.conName, LHS_type, None)
+        raise TypeMismatch(ast)
 
     def visitBlock(self, ast: Block, c: List[List[Symbol]]) -> None:
         acc = [[]] + c
