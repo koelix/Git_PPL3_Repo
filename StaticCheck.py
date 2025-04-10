@@ -73,14 +73,19 @@ class StaticChecker(BaseVisitor,Utils):
                 list_str.append(item.name)
             # TODO
 
+        # Lấy ra danh sách các Type sẽ gồm interface và struct
         self.list_type = reduce(lambda acc, ele: [self.visit(ele, acc)] + acc if isinstance(ele, Type) else acc, ast.decl, [])
+
+        # lấy ra danh sách các function (ở bước này chưa cần kiểm tra tên function có lặp lại không)
         self.list_function = self.list_function + list(filter(lambda item: isinstance(item, FuncDecl), ast.decl))
 
+        # cập nhật StructType
         list(map(
             lambda item: visitMethodDecl(item, self.lookup(item.recType.name, self.list_type, lambda x: x.name)),
              list(filter(lambda item: isinstance(item, MethodDecl), ast.decl))
         ))
 
+        # duyệt qua các khai báo gồm method/function/var và chỉ có function/method trả về Symbol để cập vào bảng Symbol
         reduce(
             lambda acc, ele: [
                 ([result] + acc[0]) if isinstance(result := self.visit(ele, acc), Symbol) else acc[0]
@@ -94,9 +99,21 @@ class StaticChecker(BaseVisitor,Utils):
             ]]
         )
 
-
-
-
+        reduce(
+            # NẾU LÀ Symbol mới được đưa vào bảng Symbol và cập nhật phần tử trả về tại trí đầu của bảng Symbol
+            lambda acc, ele: [
+                                 ([result] + acc[0]) if isinstance(result := self.visit(ele, acc), Symbol) else acc[0]
+                             ] + acc[1:],
+            # LỌC RA method/function/var
+            filter(lambda item: isinstance(item, Decl), ast.decl),
+            # TẦM VỰC ĐẦU TIÊN SẼ LÀ DANH SÁCH CÁC HÀM
+            [[
+                Symbol("getInt", FuntionType()),
+                Symbol("putInt", FuntionType()),
+                Symbol("putIntLn", FuntionType()),
+                # TODO: Implement
+            ]]
+        )
 
     def visitStructType(self, ast: StructType, c : List[Union[StructType, InterfaceType]]) -> StructType:
         res = # TODO: Implement

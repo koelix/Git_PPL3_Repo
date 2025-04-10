@@ -64,6 +64,7 @@ class StaticChecker(BaseVisitor,Utils):
         def visitMethodDecl(ast: MethodDecl, c: StructType) -> MethodDecl:
             # TODO: Implement
 
+
         list_str = ["getInt", "putInt", "putIntLn", "getFloat", "putFloat", "putFloatLn", "getBool", "putBool", "putBoolLn", "getString", "putString", "putStringLn", "putLn"]
 
         for item in ast.decl:
@@ -90,12 +91,23 @@ class StaticChecker(BaseVisitor,Utils):
                 Symbol("getInt", FuntionType()),
                 Symbol("putInt", FuntionType()),
                 Symbol("putIntLn", FuntionType()),
-                # TODO: Implement
+                Symbol("getFloat", FuntionType()),
+                Symbol("putFloat", FuntionType()),
+                Symbol("putFloatLn", FuntionType()),
+                Symbol("getBool", FuntionType()),
+                Symbol("putBool", FuntionType()),
+                Symbol("putBoolLn", FuntionType()),
+                Symbol("getString", FuntionType()),
+                Symbol("putString", FuntionType()),
+                Symbol("putStringLn", FuntionType()),
+                Symbol("putLn", FuntionType())
+                # TODO: Implement - DONE
             ]]
+
         )
 
     def visitStructType(self, ast: StructType, c : List[Union[StructType, InterfaceType]]) -> StructType:
-        res = # TODO: Implement
+        # res = # TODO: Implement
 
         def visitElements(element: Tuple[str,Type], c: List[Tuple[str,Type]]) -> Tuple[str,Type]:
             # TODO: Implement
