@@ -251,29 +251,37 @@ class StaticChecker(BaseVisitor,Utils):
         raise Undeclared(Identifier(), ast.name)
 
     def visitFuncCall(self, ast: FuncCall, c: Union[List[List[Symbol]], Tuple[List[List[Symbol]], bool]]) -> Type:
+        # 3 hàng đầu là xử lí trường hợp expr hay stmt được xử lí trong block
         is_stmt = False
         if isinstance(c, tuple):
             c, is_stmt = c
 
         res = self.lookup(ast.funName, self.list_function, lambda x: x.name)
         if res:
+            # nếu số lượng param khác nhau
             if len(res.params) != len(ast.args):
                 raise TypeMismatch(ast)
             for param, arg in zip(res.params, ast.args):
-                # TODO: Implement
+                # kiểu trả kiểu của các param có giống nhau hay không
+                pass # TODO: Implement
 
-            if is_stmt and # TODO: Implement:
-                raise TypeMismatch(ast)
-            if not is_stmt # TODO: Implement:
-                raise TypeMismatch(ast)
+            # nếu stmt yêu cầu type là void và nếu expr yêu cầu khác void
+            # if is_stmt and # TODO: Implement:
+            #     raise TypeMismatch(ast)
+            # if not is_stmt # TODO: Implement:
+            #     raise TypeMismatch(ast)
             return res.retType
         raise Undeclared(Function(), ast.funName)
 
     def visitFieldAccess(self, ast: FieldAccess, c: List[List[Symbol]]) -> Type:
+        # - tìm kiếm field trong elements của structType
         receiver_type = self.visit(ast.receiver, c)
-        receiver_type = # TODO: Implement
-        if # TODO: Implement:
-            raise TypeMismatch(ast)
+        # nếu trả về id thì cần chuyển thành struct/inteface
+        # receiver_type = # TODO: Implement
+        # if # TODO: Implement:
+        #     raise TypeMismatch(ast)
+        # receiver: Expr
+        # field: str
 
         res = self.lookup(ast.field, receiver_type.elements, lambda x: x[0])
         if res is None:
@@ -285,32 +293,33 @@ class StaticChecker(BaseVisitor,Utils):
         if isinstance(c, tuple):
             c, is_stmt = c
         receiver_type = self.visit(ast.receiver, c)
-        receiver_type = # TODO: Implement
-        if # TODO: Implement:
-            raise TypeMismatch(ast)
+        # receiver_type = # TODO: Implement
+        # if # TODO: Implement:
+        #     raise TypeMismatch(ast)
         res = self.lookup(ast.metName, receiver_type.methods, lambda x: x.fun.name) if isinstance(receiver_type, StructType) else self.lookup(ast.metName, receiver_type.methods, lambda x: x.name)
         if res:
             if type(receiver_type) == StructType:
                 if len(res.fun.params) != len(ast.args):
                     raise TypeMismatch(ast)
                 for param, arg in zip(res.fun.params, ast.args):
-                    # TODO: Implement
-                if is_stmt and # TODO: Implement:
-                    raise TypeMismatch(ast)
-                if not is_stmt and # TODO: Implement:
-                    raise TypeMismatch(ast)
+                    pass # TODO: Implement
+                # if is_stmt and # TODO: Implement:
+                #     raise TypeMismatch(ast)
+                # if not is_stmt and # TODO: Implement:
+                #     raise TypeMismatch(ast)
                 return # TODO: Implement
             if type(receiver_type) == InterfaceType:
                 if len(res.params) != len(ast.args):
                     raise TypeMismatch(ast)
                 for param, arg in zip(res.params, ast.args):
-                    if # TODO: Implement:
-                        raise TypeMismatch(ast)
+                    pass
+                    # if # TODO: Implement:
+                    #     raise TypeMismatch(ast)
 
-                if is_stmt and  # TODO: Implement:
-                    raise TypeMismatch(ast)
-                if not is_stmt and # TODO: Implement:
-                    raise TypeMismatch(ast)
+                # if is_stmt and  # TODO: Implement:
+                #     raise TypeMismatch(ast)
+                # if not is_stmt and # TODO: Implement:
+                #     raise TypeMismatch(ast)
                 return # TODO: Implement
         raise Undeclared(Method(), ast.metName)
 
@@ -321,21 +330,22 @@ class StaticChecker(BaseVisitor,Utils):
     def visitStringType(self, ast, c: List[List[Symbol]]) -> Type: return ast
     def visitVoidType(self, ast, c: List[List[Symbol]]) -> Type: return ast
     def visitArrayType(self, ast: ArrayType, c: List[List[Symbol]]):
-        list(map(lambda item: # TODO: Implement, ast.dimens))
+        # list(map(lambda item: # TODO: Implement, ast.dimens))
         return ast
 
     def evaluate_ast(self, node: AST, c: List[List[Symbol]]) -> int:
         if type(node) == IntLiteral:
             return int(node.value)
         elif type(node) == Id:
-            res =  # TÌM GIÁ TRỊ
+            res =  # TODO: TÌM GIÁ TRỊ
             return
             ## TODO binary và Unary, các trường hợp còn lại sẽ không hợp lệ vì sẽ không là kiểu int và thầy đã thông báo trên forum
         return 0
 
     def visitAssign(self, ast: Assign, c: List[List[Symbol]]) -> None:
         if type(ast.lhs) is Id:
-            # TÌM KIẾM XEM BIẾN ĐÃ ĐƯỢC KHAI BÁO CHƯA ĐƯỢC KHAI BÁO THÌ TRẢ VỀ Symbol(ast.lhs.name, self.visit(ast.rhs, c), None)
+            pass
+            # TODO: TÌM KIẾM XEM BIẾN ĐÃ ĐƯỢC KHAI BÁO CHƯA ĐƯỢC KHAI BÁO THÌ TRẢ VỀ Symbol(ast.lhs.name, self.visit(ast.rhs, c), None)
 
         LHS_type = self.visit(ast.lhs, c)
         RHS_type = self.visit(ast.rhs, c)
@@ -343,11 +353,17 @@ class StaticChecker(BaseVisitor,Utils):
             raise TypeMismatch(ast)
 
     def visitIf(self, ast: If, c: List[List[Symbol]]) -> None:
-        if # TODO: Implement:
+        # Check kiểu của expr có phải bool không
+        expr_type: Type = self.visit(ast.expr, c)
+        # if # TODO: Implement - Done:
+        #     raise TypeMismatch(ast)
+        if not isinstance(expr_type, BoolType):
             raise TypeMismatch(ast)
+        # Kiểm tra thêm các lỗi trong then, do check tuần t, ko có giá trị của expr
         self.visit(Block(ast.thenStmt.member), c)
+        # Nếu có phần else, check tiếp
         if ast.elseStmt:
-            # TODO: Implement
+            self.visit(ast.elseStmt, c) # TODO: Implement - Done
 
     def visitContinue(self, ast, c: List[List[Symbol]]) -> None: return None
     def visitBreak(self, ast, c: List[List[Symbol]]) -> None: return None
