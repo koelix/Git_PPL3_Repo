@@ -1,1 +1,1 @@
-Redeclared Function: foo
+Type Mismatch: VarDecl(a,Id(VO),FuncCall(foo,[]))
