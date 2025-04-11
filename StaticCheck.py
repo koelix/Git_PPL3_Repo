@@ -83,11 +83,22 @@ class StaticChecker(BaseVisitor,Utils):
 
     def visitProgram(self, ast: Program,c : None):
         def visitMethodDecl(ast: MethodDecl, c: StructType) -> MethodDecl:
-            pass
-            # TODO: Implement
+            # Receive the MethodDecl and a Struct, populate the struct with the method Decl
+            # StructType
+            # 	name: str
+            # 	elements: List[Tuple[str, Type]]
+            # 	methods: List[MethodDecl]
+            res = self.lookup(ast.fun.name, c.methods, lambda x: x.fun.name)
+            if not res is None:
+                raise Redeclared(Method(), ast.fun.name)
+            # add the method to the struct
+            c.methods.append(ast)
+            return ast
+            # TO DO: Implement
 
         list_str = ["getInt", "putInt", "putIntLn", "getFloat", "putFloat", "putFloatLn", "getBool", "putBool", "putBoolLn", "getString", "putString", "putStringLn", "putLn"]
 
+        # khai báo type không được chung với tên hàm và tên biến, hàm:
         for item in ast.decl:
             if isinstance(item, Type):
                 if item.name in list_str:
@@ -95,13 +106,13 @@ class StaticChecker(BaseVisitor,Utils):
                 list_str.append(item.name)
             # TODO
 
-        # Lấy ra danh sách các Type sẽ gồm interface và struct
+        # Lấy ra danh sách các Type sẽ gồm interface và struct (Chỉ các field, chưa tính method)
         self.list_type = reduce(lambda acc, ele: [self.visit(ele, acc)] + acc if isinstance(ele, Type) else acc, ast.decl, [])
 
         # lấy ra danh sách các function (ở bước này chưa cần kiểm tra tên function có lặp lại không)
         self.list_function = self.list_function + list(filter(lambda item: isinstance(item, FuncDecl), ast.decl))
 
-        # cập nhật StructType
+        # cập nhật StructType, bằng các receiver?
         list(map(
             lambda item: visitMethodDecl(item, self.lookup(item.recType.name, self.list_type, lambda x: x.name)),
              list(filter(lambda item: isinstance(item, MethodDecl), ast.decl))
@@ -196,8 +207,22 @@ class StaticChecker(BaseVisitor,Utils):
         return Symbol(ast.parName, ast.parType, None)
 
     def visitMethodDecl(self, ast: MethodDecl, c : List[List[Symbol]]) -> None:
-        pass
+        # Truyền receiver vào 1 scope riêng trước (Add vô đây)
+        # Bỏ scope param  vô sau (Cho funcDecl làm)
+        # [
+        #     [most local]
+        #     [receveiver]
+        #     [params]
+        #     [most global]
+        # ]
+        # Add a new scope [Symbol(ast.receiver, ast.recType, None)] to c
+        # Delegate the responsibility of checking parameters to visitFuncDecl
+        self.visit(ast.fun,[[Symbol(ast.receiver, ast.recType, None)]]+ c)
         # TODO: Implement
+        # class MethodDecl(Decl):
+        #     receiver: str
+        #     recType: Type
+        #     fun: FuncDecl
 
     def visitVarDecl(self, ast: VarDecl, c : List[List[Symbol]]) -> Symbol:
         # Check có rùi bị trùng
@@ -240,6 +265,7 @@ class StaticChecker(BaseVisitor,Utils):
         raise TypeMismatch(ast)
 
     def visitBlock(self, ast: Block, c: List[List[Symbol]]) -> None:
+        # - Gọi đến block để cấp phát tầm vực mới
         acc = [[]] + c
 
         for ele in ast.member:
@@ -248,24 +274,43 @@ class StaticChecker(BaseVisitor,Utils):
                 acc[0] = [result] + acc[0]
 
     def visitForBasic(self, ast: ForBasic, c : List[List[Symbol]]) -> None:
-        pass
-        # if # TODO: Implement:
-        #     raise TypeMismatch(ast)
-        # self.visit(ast.loop, c)
+        type_cond: Type = self.visit(ast.cond, c)
+        # Dieu kien for kieu bool
+        if not isinstance(type_cond, BoolType): # TO DO:
+            raise TypeMismatch(ast)
+        # - Gọi đến block để cấp phát tầm vực mới
+        self.visit(Block(ast.loop.member), c)
+        self.visit(ast.loop, c)
+        # class ForBasic(Stmt):
+        #     cond: Expr
+        #     loop: Block
+        # class Block(Stmt):
+        #     member: List[BlockMember]
 
     def visitForStep(self, ast: ForStep, c: List[List[Symbol]]) -> None:
+        # Usage: ???
         symbol = self.visit(ast.init, [[]] +  c)
-        pass
-        # if # TODO: Implement:
+        # Lấy kiểu của cond để xét bool
+        # type_cond = self.visit(ast.cond, c)
+        # Điều kiện dừng của for kiểu bool
+        # if not isinstance(type_cond, BoolType): # TODO: Implement:
         #     raise TypeMismatch(ast)
-        # self.visit(Block([ast.init] + ast.loop.member + [ast.upda]), c)
+        # đưa các khai báo vào chung tầm vực block
+        self.visit(Block([ast.init] + ast.loop.member + [ast.upda]), c)
+        # class ForStep(Stmt):
+        # 	init: Stmt
+        # 	cond: Expr
+        # 	upda: Assign
+        # 	loop: Block
 
     def visitForEach(self, ast: ForEach, c: List[List[Symbol]]) -> None:
         type_array = self.visit(ast.arr, c)
         pass
+        # arr phải có kiểu array
         # if # TODO: Implement:
         #     raise TypeMismatch(ast)
         #
+        # cần khai báo 2 biến khởi tạo index và value với type của index là intType và type của value là ARRAY - 1 (nếu 1 chiều là kiểu của array đó, nêu 2 chiều là thành 1 chiều)
         # self.visit(Block([VarDecl(# TODO: Implement),
         #                   VarDecl(ast.value.name,
         #                           # TODO: Implement,
@@ -288,19 +333,26 @@ class StaticChecker(BaseVisitor,Utils):
     #     raise Undeclared(Identifier(), ast.name)
 
     def visitId(self, ast: Id, c: list[list[Symbol]]) -> Type:
-        for sublist in c:  # Iterate over all sublists in c
-            res: Symbol = next(filter(lambda x: x.name == ast.name, sublist), None)
+        for subScope in c:  # Iterate over all sublists in c
+            res: Symbol = next(filter(lambda x: x.name == ast.name, subScope), None)
             if res and not isinstance(res.mtype, Function):
+
                 return res.mtype if not isinstance(res.mtype, Id) else self.lookup(res.mtype.name, self.list_type, lambda x: x.name)
         raise Undeclared(Identifier(), ast.name)
 
     def visitFuncCall(self, ast: FuncCall, c: Union[List[List[Symbol]], Tuple[List[List[Symbol]], bool]]) -> Type:
+        # class FuncCall(Expr, Stmt):
+        # 	funName: str
+        # 	args: List[Expr]  # [] if there is no arg
         # 3 hàng đầu là xử lí trường hợp expr hay stmt được xử lí trong block
         is_stmt = False
         if isinstance(c, tuple):
             c, is_stmt = c
 
+        # Tìm xem tất tên hàm đã được khai báo chưa
         res = self.lookup(ast.funName, self.list_function, lambda x: x.name)
+
+        # Nếu đã khai báo
         if res:
             # nếu số lượng param khác nhau
             if len(res.params) != len(ast.args):
@@ -309,18 +361,24 @@ class StaticChecker(BaseVisitor,Utils):
                 # kiểu trả kiểu của các param có giống nhau hay không
                 pass # TODO: Implement
 
+            # Đã tìm thấy function trong res, lấy ra retType
+            realRetType = self.getType(res.retType)
             # nếu stmt yêu cầu type là void và nếu expr yêu cầu khác void
-            # if is_stmt and # TODO: Implement:
-            #     raise TypeMismatch(ast)
-            # if not is_stmt # TODO: Implement:
-            #     raise TypeMismatch(ast)
+            if is_stmt and not isinstance(realRetType, VoidType): # TODO: Implement
+                raise TypeMismatch(ast)
+            if not is_stmt and isinstance(realRetType, VoidType): # TODO: Implement:
+                raise TypeMismatch(ast)
             return res.retType
+
         raise Undeclared(Function(), ast.funName)
 
     def visitFieldAccess(self, ast: FieldAccess, c: List[List[Symbol]]) -> Type:
         # - tìm kiếm field trong elements của structType
         receiver_type = self.visit(ast.receiver, c)
+
         # nếu trả về id thì cần chuyển thành struct/inteface
+        if isinstance(receiver_type, StructType):
+            raise TypeMismatch(ast)
         # receiver_type = # TODO: Implement
         # if # TODO: Implement:
         #     raise TypeMismatch(ast)
@@ -333,36 +391,98 @@ class StaticChecker(BaseVisitor,Utils):
         return res[1]
 
     def visitMethCall(self, ast: MethCall, c: Union[List[List[Symbol]], Tuple[List[List[Symbol]], bool]]) -> Type:
+        # class MethCall(Expr, Stmt):
+        # 	receiver: Expr
+        # 	metName: str
+        # 	args: List[Expr]
+
+        # class StructType(Type):
+        #     name: str
+        #     elements: List[Tuple[str, Type]]
+        #     methods: List[MethodDecl]
+
+        # class InterfaceType(Type):
+        #     name: str
+        #     methods: List[Prototype]
+
+        # class MethodDecl(Decl):
+        #     receiver: str
+        #     recType: Type
+        #     fun: FuncDecl
+
+        # class Prototype(AST):
+        #     name: str
+        #     params: List[Type]
+        #     retType: Type  # VoidType if there is no return type
+
+        # class FuncDecl(Decl):
+        #     name: str
+        #     params: List[ParamDecl]
+        #     retType: Type  # VoidType if there is no return type
+        #     body: Block
+
+        # class ParamDecl(Decl):
+        #     parName: str
+        #     parType: Type
+
         is_stmt = False
         if isinstance(c, tuple):
             c, is_stmt = c
+
         receiver_type = self.visit(ast.receiver, c)
         # receiver_type = # TODO: Implement
         # if # TODO: Implement:
         #     raise TypeMismatch(ast)
+
+        # Tìm kiếm dựa trên kiểu của StructType hoặc InterfaceType
+        # Nhằm tìm ra cái method đó
         res = self.lookup(ast.metName, receiver_type.methods, lambda x: x.fun.name) if isinstance(receiver_type, StructType) else self.lookup(ast.metName, receiver_type.methods, lambda x: x.name)
+
         if res:
+            # Kiểu Struct được trả về, res là MethodDecl
             if type(receiver_type) == StructType:
+                # Nếu khác số lượng tham số
                 if len(res.fun.params) != len(ast.args):
                     raise TypeMismatch(ast)
+                # Kiểm tra lần lượt nếu các parameters bị gọi khác kiểu nhau
                 for param, arg in zip(res.fun.params, ast.args):
+                    #  Đi vô tìm type gốc cho từng args
+                    argType = self.getType(ast.arg, c)
                     pass # TODO: Implement
-                # if is_stmt and # TODO: Implement:
+
+                realRetType = self.getType(res.fun.retType)
+                # nếu stmt yêu cầu type là void và nếu expr yêu cầu khác void
+                if is_stmt and not isinstance(realRetType, VoidType):  # TODO: Implement
+                    raise TypeMismatch(ast)
+                if not is_stmt and isinstance(realRetType, VoidType):  # TODO: Implement:
+                    raise TypeMismatch(ast)
+                # if is_stmt and # TO DO: Implement:
                 #     raise TypeMismatch(ast)
-                # if not is_stmt and # TODO: Implement:
+                # if not is_stmt and # TO DO: Implement:
                 #     raise TypeMismatch(ast)
                 return # TODO: Implement
+
+            # Kiểu trả về là interface, thì biến res đang chưa Prototype
             if type(receiver_type) == InterfaceType:
+                # Nếu khác số lượng tham số
                 if len(res.params) != len(ast.args):
                     raise TypeMismatch(ast)
+                # Kiểm tra từng Tyep của từng cặp Params
                 for param, arg in zip(res.params, ast.args):
                     pass
                     # if # TODO: Implement:
                     #     raise TypeMismatch(ast)
 
-                # if is_stmt and  # TODO: Implement:
+                # Đây đang là Prototype, gọi trực tiếp retType của nó
+                realRetType = self.getType(res.retType)
+                # nếu stmt yêu cầu type là void và nếu expr yêu cầu khác void
+                if is_stmt and not isinstance(realRetType, VoidType):  # TODO: Implement
+                    raise TypeMismatch(ast)
+                if not is_stmt and isinstance(realRetType, VoidType):  # TODO: Implement:
+                    raise TypeMismatch(ast)
+                # if is_stmt and  # TO DO: Implement:
                 #     raise TypeMismatch(ast)
-                # if not is_stmt and # TODO: Implement:
+                # if not is_stmt and # TO DO: Implement:
                 #     raise TypeMismatch(ast)
                 return # TODO: Implement
         raise Undeclared(Method(), ast.metName)
@@ -385,6 +505,16 @@ class StaticChecker(BaseVisitor,Utils):
         #     ## TODO binary và Unary, các trường hợp còn lại sẽ không hợp lệ vì sẽ không là kiểu int và thầy đã thông báo trên forum
         return 0
 
+    def getType(self, typ_var: Type) -> Type:
+        # If ID then move further to get type
+        if isinstance(typ_var, Id):
+            seeking_type = self.lookup(typ_var.name, self.list_type, lambda x: x.name)
+            # Not found
+            if seeking_type is None:
+                raise Undeclared(Type(), typ_var.name)
+            # Found
+        return typ_var
+
     def visitAssign(self, ast: Assign, c: List[List[Symbol]]) -> None:
         if type(ast.lhs) is Id:
             pass
@@ -392,13 +522,14 @@ class StaticChecker(BaseVisitor,Utils):
 
         LHS_type = self.visit(ast.lhs, c)
         RHS_type = self.visit(ast.rhs, c)
+
         if not self.checkType(LHS_type, RHS_type, [(FloatType, IntType), (InterfaceType, StructType)]):
             raise TypeMismatch(ast)
 
     def visitIf(self, ast: If, c: List[List[Symbol]]) -> None:
         # Check kiểu của expr có phải bool không
         expr_type: Type = self.visit(ast.expr, c)
-        # if # TODO: Implement - Done:
+        # if # TO DO: Implement - Done:
         #     raise TypeMismatch(ast)
         if not isinstance(expr_type, BoolType):
             raise TypeMismatch(ast)
@@ -406,36 +537,111 @@ class StaticChecker(BaseVisitor,Utils):
         self.visit(Block(ast.thenStmt.member), c)
         # Nếu có phần else, check tiếp
         if ast.elseStmt:
-            self.visit(ast.elseStmt, c) # TODO: Implement - Done
+            self.visit(ast.elseStmt, c) # TO DO: Implement - Done
 
     def visitContinue(self, ast, c: List[List[Symbol]]) -> None: return None
     def visitBreak(self, ast, c: List[List[Symbol]]) -> None: return None
     def visitReturn(self, ast, c: List[List[Symbol]]) -> None:
-        # - so sánh type trả về với function_current (nếu không trả về mặt định vào void)
-        # if not self.checkType(# TODO: Implement, self.function_current.retType):
+        # - so sánh type trả về với function_current (nếu không trả về mặc định vào void)
+        # if not self.checkType(# TO DO: Implement, self.function_current.retType):
         #     raise TypeMismatch(ast)
-        return None
+        toCheckReturnType = VoidType()
+        if ast.expr is not None:
+            toCheckReturnType = self.visit(ast.expr, c)
+
+        if not self.checkType(toCheckReturnType, self.function_current.retType):
+            raise TypeMismatch(ast)
+        return None # Default trả None
 
     def visitBinaryOp(self, ast: BinaryOp, c: List[List[Symbol]]):
         # - kiểm tra kiểu LHS và RHS trước nếu bằng nhau xét đến kiểu bên trong và type trả về
         LHS_type = self.visit(ast.left, c)
         RHS_type = self.visit(ast.right, c)
 
-        if ast.op in ['+']:
-            if self.checkType(LHS_type, RHS_type, [(IntType, FloatType), (FloatType, IntType)]):
+        #  • +,-, *, /, %
+        #  • ==, !=, <, <=, >, >=
+        #  • &&, ||, !
+        #  • :=, +=,-=, *=, /=, %=
+        #  • =,.
+        if ast.op in ['+','-','/','*']:
+            # if self.checkType(LHS_type, RHS_type, [(IntType, FloatType), (FloatType, IntType)]):
+                # Bool không có + / * / chỉ có ! && và ||
+                if type(RHS_type) == BoolType or type(LHS_type) == BoolType:
+                    raise TypeMismatch(ast)
+
+                # String Type
+                if ((type(LHS_type) == StringType and type(RHS_type) != StringType) or
+                        (type(RHS_type) == StringType and type(LHS_type) != StringType)):
+                    raise TypeMismatch(ast)
                 if type(LHS_type) == StringType:
                     return StringType()
-                elif type(LHS_type) == FloatType:
+
+                # Float type
+                if type(LHS_type) == FloatType:
                     return FloatType()
-                elif type(RHS_type) == FloatType:
+                if type(RHS_type) == FloatType:
                     return FloatType()
-                elif type(LHS_type) == IntType:
+
+                # Int Type
+                if type(LHS_type) == IntType:
                     return IntType()
+
+        #  A value of boolean type can be true or false.
+        #  The following operators can be used on Boolean values:
+        #  ! && ||
+        if ast.op in ['&&','||']:
+            if type(RHS_type) == BoolType and type(LHS_type) == BoolType:
+                return BoolType()
+
+        if ast.op in ['>', '<', '>=', '<=', '==', '!=']:
+            if (type(RHS_type) == type(LHS_type)) and (LHS_type == RHS_type):
+                return BoolType()
+
+        # 4.2 Integer type
+        #  A value of type int can be a whole number, positive or negative.
+        #  + - * / %
+        #  == != > >= < <=
+
+        #  4.3 Float type
+        #  A value of type float can represent real numbers, including those with decimal points.
+        #  The following operators can be used with float values:
+        #  * > / >= % < <=
+        #  + == - !=
+
+        #  4.4 String type
+        #  The following operations are supported for string values:
+        #  • +: Concatenation of two strings.
+        #  • ==: Check if two strings are equal.
+        #
+        #  • !=: Check if two strings are not equal.
+        #  • <, <=, >, >=: Lexicographical comparison of strings.
+
         # TODO: Implement
         raise TypeMismatch(ast)
 
     def visitUnaryOp(self, ast: UnaryOp, c: List[List[Symbol]]):
+        # class UnaryOp(Expr):
+        #     op: str
+        #     body: Expr
+
         unary_type = self.visit(ast.body, c)
+        #  A value of boolean type can be true or false.
+        #  The following operators can be used on Boolean values:
+        #  !
+
+        if ast.op in ['!']:
+            if isinstance(expr_type, BoolType):
+                return BoolType()
+            else:
+                raise TypeMismatch(ast)
+
+        if ast.op in ['+', '-']:
+            if isinstance(expr_type, FloatType):
+                return FloatType()
+            elif isinstance(expr_type, IntType):
+                return IntType()
+            else:
+                raise TypeMismatch(ast)
         # TODO: Implement
 
     def visitArrayCell(self, ast: ArrayCell, c: List[List[Symbol]]):

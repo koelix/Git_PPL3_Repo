@@ -1,1 +1,1 @@
-Type Mismatch: BinaryOp(BooleanLiteral(true),&&,BooleanLiteral(false))
+Type Mismatch: BinaryOp(BooleanLiteral(true),&&,IntLiteral(1))
